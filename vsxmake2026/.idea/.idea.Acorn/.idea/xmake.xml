@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="XMakeBuildProfiles">
+    <option name="profiles">
+      <list>
+        <XMakeBuildProfile>
+          <option name="androidNdkDirectory" value="" />
+          <option name="architecture" value="default" />
+          <option name="buildDirectory" value="" />
+          <option name="buildMode" value="release" />
+          <option name="configureArguments" value="" />
+          <option name="id" value="09e5d35b-54e4-45af-b236-e5dda257f08b" />
+          <option name="name" value="Default" />
+          <option name="platform" value="default" />
+          <option name="toolchain" value="default" />
+          <option name="toolkitId" />
+          <option name="verbose" value="false" />
+        </XMakeBuildProfile>
+      </list>
+    </option>
+  </component>
+</project>
