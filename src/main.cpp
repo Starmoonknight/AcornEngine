@@ -46,6 +46,7 @@ namespace
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     
+        // Apple not possible on 4.6    :( 
 #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
@@ -77,30 +78,30 @@ namespace
     }
     
     
-    unsigned int CreateTriangleVBO()
+    struct TriangleGeometry
+    {
+        unsigned int VAO;
+        unsigned int VBO;
+    };
+
+    TriangleGeometry CreateTriangleGeometry()
     {
         float vertices[] = {
             -0.5f, -0.5f, 0.0f,
              0.5f, -0.5f, 0.0f,
              0.0f,  0.5f, 0.0f
         };  
-    
-        unsigned int TriangleVBO;
-        glGenBuffers(1, &TriangleVBO);  
-        glBindBuffer(GL_ARRAY_BUFFER, TriangleVBO); 
+        
+        TriangleGeometry triangle{};
+        
+        glGenVertexArrays(1, &triangle.VAO);
+        glGenBuffers(1, &triangle.VBO);  
+        
+        glBindVertexArray(triangle.VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, triangle.VBO); 
+        
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
         
-        return TriangleVBO;
-    }
-    
-    unsigned int CreatePositionVAO_ThreeStep(unsigned int VBO)
-    {
-        unsigned int VAO;
-        glGenVertexArrays(1, &VAO);
-        
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO); // make sure correct VBO is selected for this setup 
-    
         glVertexAttribPointer(
             0,                   // Attribute location.
             3,                   // x, y, z.
@@ -110,13 +111,22 @@ namespace
             (void*)0             // Starting offset.
         );
         glEnableVertexAttribArray(0);
-    
-        // unbind VBO and VAO? 
+        
+        // unbind VBO and VAO to clear what is being selected 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
         
-        return VAO;
+        return triangle;
     }
+    
+    void DestroyTriangleGeometry(TriangleGeometry& triangle)
+    {
+        glDeleteVertexArrays(1, &triangle.VAO);
+        glDeleteBuffers(1, &triangle.VBO);
+
+        triangle = {};
+    }
+    
     
     void processInput(GLFWwindow* window)
     {
@@ -193,9 +203,7 @@ int main(int argc, char **argv) {
     
     
     // Linking 
-    unsigned int triangleVBO = CreateTriangleVBO();
-    unsigned int triangleVAO = CreatePositionVAO_ThreeStep(triangleVBO);
-    
+    TriangleGeometry triangle = CreateTriangleGeometry();
     
     // render loop
     while(!glfwWindowShouldClose(window))
@@ -207,7 +215,7 @@ int main(int argc, char **argv) {
     
         // activate program
         glUseProgram(shaderProgram);
-        glBindVertexArray(triangleVAO);
+        glBindVertexArray(triangle.VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         
         glfwSwapBuffers(window);
@@ -215,8 +223,7 @@ int main(int argc, char **argv) {
     }
     
     
-    glDeleteVertexArrays(1, &triangleVAO);
-    glDeleteBuffers(1, &triangleVBO);
+    DestroyTriangleGeometry(triangle);
     glDeleteProgram(shaderProgram);
     glfwDestroyWindow(window);
     glfwTerminate();
