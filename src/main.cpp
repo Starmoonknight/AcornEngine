@@ -1,3 +1,5 @@
+#include <cassert>
+#include <cstddef>
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <iostream>
@@ -77,13 +79,15 @@ namespace
         return window; 
     }
     
-    
+    // don't think I like grouping together these in a struct, because multiple combinations are possible, 
+    // it's too specific and has potential ownership issues later on. Will keep for now as learning history. 
     struct TriangleGeometry
     {
-        unsigned int VAO;
-        unsigned int VBO;
+        unsigned int VAO = 0;
+        unsigned int VBO = 0;
     };
-
+    
+    // moved this out to get a better overview of the steps, but feels like the function is to rigid 
     TriangleGeometry CreateTriangleGeometry()
     {
         float vertices[] = {
@@ -125,6 +129,54 @@ namespace
         glDeleteBuffers(1, &triangle.VBO);
 
         triangle = {};
+    }
+    
+    
+    
+    // second iteration of the CreateTriangleGeometry() function, goal to be more generic and reusable, 
+    // but this is still probably a bad or at least not well-made function  
+    // also found out assert, that looks useful
+    void CreatePositionOnlyGeometry(
+        unsigned int& VAO, unsigned int& VBO,
+        const float* vertices, std::size_t vertexDataBytes, 
+        int componentsPerPosition = 3,
+        GLenum usage = GL_STATIC_DRAW)
+    {
+        // testing out assert preconditions 
+        assert(VAO == 0 && VBO == 0);
+        assert(vertices != nullptr);
+        assert(componentsPerPosition >= 2 && componentsPerPosition <= 4);
+        
+        const std::size_t positionBytes = static_cast<std::size_t>(componentsPerPosition) * sizeof(float);
+        
+        assert(vertexDataBytes > 0);
+        assert(vertexDataBytes % positionBytes == 0);
+        
+        const GLsizeiptr uploadBytes = static_cast<GLsizeiptr>(vertexDataBytes);
+        const GLsizei stride = static_cast<GLsizei>(positionBytes);
+        
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);  
+        
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO); 
+        
+        glBufferData(GL_ARRAY_BUFFER, uploadBytes, vertices, usage);
+        
+        glVertexAttribPointer(
+            0,                      // Attribute location.
+            componentsPerPosition,  // x, y, z.
+            GL_FLOAT,
+            GL_FALSE,
+            stride,                 // Distance between positions.
+            nullptr                 // Starting offset.
+        );
+        glEnableVertexAttribArray(0);
+        
+        // unbind VBO and VAO to clear what is being selected, no relying on selections surviving between functions 
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        
     }
     
     
@@ -202,8 +254,39 @@ int main(int argc, char **argv) {
     glDeleteShader(fragmentShader);
     
     
-    // Linking 
-    TriangleGeometry triangle = CreateTriangleGeometry();
+    // Triangle test 
+    //TriangleGeometry triangle = CreateTriangleGeometry();
+    
+    
+    // Rectangle test
+    float vertices[] = {
+        0.5f,  0.5f, 0.0f,  // top right
+        0.5f, -0.5f, 0.0f,  // bottom right
+       -0.5f, -0.5f, 0.0f,  // bottom left
+       -0.5f,  0.5f, 0.0f   // top left 
+   };
+    unsigned int indices[] = {  
+        0, 1, 3,   // first triangle
+        1, 2, 3    // second triangle
+    };  
+    
+    unsigned int VAO = 0;
+    unsigned int VBO = 0;
+
+    CreatePositionOnlyGeometry(VAO, VBO, vertices, sizeof(vertices));
+    
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+    glBindVertexArray(VAO);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); 
+    
+    glBindVertexArray(0);
+    
+    
+    
+    
     
     // render loop
     while(!glfwWindowShouldClose(window))
@@ -215,15 +298,25 @@ int main(int argc, char **argv) {
     
         // activate program
         glUseProgram(shaderProgram);
-        glBindVertexArray(triangle.VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        
+        // Triangle test
+        //glBindVertexArray(triangle.VAO);
+        //glDrawArrays(GL_TRIANGLES, 0, 3);
+        
+        // Rectangle test
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
         glfwSwapBuffers(window);
         glfwPollEvents();    
     }
     
     
-    DestroyTriangleGeometry(triangle);
+    //DestroyTriangleGeometry(triangle);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    // also delete EBO? fix next day 
+    
     glDeleteProgram(shaderProgram);
     glfwDestroyWindow(window);
     glfwTerminate();
