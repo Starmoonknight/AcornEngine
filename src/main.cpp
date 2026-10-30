@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 #include <iostream>
+#include <cmath>
 
 
 namespace
@@ -12,23 +13,26 @@ namespace
     
     const char *vertexShaderSource = "#version 460 core\n"
         "layout (location = 0) in vec3 aPos;\n"
-        "out vec4 vertexColor;\n"
+        "layout (location = 1) in vec3 aColor;\n"
+    
+        "out vec3 ourColor;\n"
+        
         "void main()\n"
         "{\n"
         "   gl_Position = vec4(aPos, 1.0);\n"
-        "   vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" 
+        "   ourColor = aColor;\n" 
         "}\0";
     const char *fragmentShaderSource = "#version 460 core\n"
         "out vec4 FragColor;\n"
-        "in vec4 vertexColor;\n"
-        "uniform vec4 ourColor;\n"
+        "in vec3 ourColor;\n"
+        
         "void main()\n"
         "{\n"
-        "   FragColor = ourColor;\n"
+        "   FragColor = vec4(ourColor, 1.0);\n"
         "}\n\0";
     
     
-
+    
     void glfwErrorCallback(int error, const char* description)
     {
         std::cerr << "GLFW error (" << error << "): " << description << '\n';
@@ -82,53 +86,7 @@ namespace
     
         return window; 
     }
-    
-    
-    // second iteration of the CreateTriangleGeometry() function, goal to be more generic and reusable, 
-    // but this is still probably a bad or at least not well-made function  
-    // also found out assert, that looks useful
-    void CreatePositionOnlyGeometry(
-        unsigned int& VAO, unsigned int& VBO,
-        const float* vertices, std::size_t vertexDataBytes, 
-        int componentsPerPosition = 3,
-        GLenum usage = GL_STATIC_DRAW)
-    {
-        // testing out assert preconditions 
-        assert(VAO == 0 && VBO == 0);
-        assert(vertices != nullptr);
-        assert(componentsPerPosition >= 2 && componentsPerPosition <= 4);
         
-        const std::size_t positionBytes = static_cast<std::size_t>(componentsPerPosition) * sizeof(float);
-        
-        assert(vertexDataBytes > 0);
-        assert(vertexDataBytes % positionBytes == 0);
-        
-        const GLsizeiptr uploadBytes = static_cast<GLsizeiptr>(vertexDataBytes);
-        const GLsizei stride = static_cast<GLsizei>(positionBytes);
-        
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);  
-        
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO); 
-        
-        glBufferData(GL_ARRAY_BUFFER, uploadBytes, vertices, usage);
-        
-        glVertexAttribPointer(
-            0,                      // Attribute location.
-            componentsPerPosition,  // x, y, z.
-            GL_FLOAT,
-            GL_FALSE,
-            stride,                 // Distance between positions.
-            nullptr                 // Starting offset.
-        );
-        glEnableVertexAttribArray(0);
-        
-        // unbind VBO and VAO to clear what is being selected, no relying on selections surviving between functions 
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
-    
     
     void processInput(GLFWwindow* window)
     {
@@ -203,44 +161,28 @@ int main(int argc, char **argv) {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     
-    
-    
-    // Triangle test 
-    float triangleVertices[] = {
-        -0.5f, -0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-         0.0f,  0.5f, 0.0f
-    };  
-    
-    unsigned int triangleVAO = 0;
-    unsigned int triangleVBO = 0;
-    CreatePositionOnlyGeometry(triangleVAO, triangleVBO, triangleVertices, sizeof(triangleVertices));
-    
-    
-    // Rectangle test
     float vertices[] = {
-        0.5f,  0.5f, 0.0f,  // top right
-        0.5f, -0.5f, 0.0f,  // bottom right
-       -0.5f, -0.5f, 0.0f,  // bottom left
-       -0.5f,  0.5f, 0.0f   // top left 
-   };
-    unsigned int indices[] = {  
-        0, 1, 3,   // first triangle
-        1, 2, 3    // second triangle
-    };  
+        // positions         // colors
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
+       -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
+        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
+   };  
     
-    unsigned int rectangleVAO = 0;
-    unsigned int rectangleVBO = 0;
-    CreatePositionOnlyGeometry(rectangleVAO, rectangleVBO, vertices, sizeof(vertices));
+    unsigned int VBO, VAO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
     
-    unsigned int EBO;
-    glGenBuffers(1, &EBO);
-    glBindVertexArray(rectangleVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); 
-    
-    glBindVertexArray(0);
+    glBindVertexArray(VAO);
     
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
@@ -261,32 +203,19 @@ int main(int argc, char **argv) {
         // activate program
         glUseProgram(shaderProgram);
         
-        float timeValue = glfwGetTime();
-        float greenValue = sin(timeValue) / 2.0f + 0.5f;
-        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-        
         // Triangle test
-        glBindVertexArray(triangleVAO);
+        glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
-        
-        // Rectangle test
-        //glBindVertexArray(rectangleVAO);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
         glfwSwapBuffers(window);
         glfwPollEvents();    
     }
     
     // Triangle cleanup
-    glDeleteVertexArrays(1, &triangleVAO);
-    glDeleteBuffers(1, &triangleVBO);
-    // Rectangle cleanup 
-    glDeleteVertexArrays(1, &rectangleVAO);
-    glDeleteBuffers(1, &rectangleVBO);
-    glDeleteBuffers(1, &EBO);
-    
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
     glDeleteProgram(shaderProgram);
+    
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
