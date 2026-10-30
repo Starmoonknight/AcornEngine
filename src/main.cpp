@@ -12,15 +12,19 @@ namespace
     
     const char *vertexShaderSource = "#version 460 core\n"
         "layout (location = 0) in vec3 aPos;\n"
+        "out vec4 vertexColor;\n"
         "void main()\n"
         "{\n"
-        "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+        "   gl_Position = vec4(aPos, 1.0);\n"
+        "   vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" 
         "}\0";
     const char *fragmentShaderSource = "#version 460 core\n"
         "out vec4 FragColor;\n"
+        "in vec4 vertexColor;\n"
+        "uniform vec4 ourColor;\n"
         "void main()\n"
         "{\n"
-        "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+        "   FragColor = ourColor;\n"
         "}\n\0";
     
     
@@ -79,59 +83,6 @@ namespace
         return window; 
     }
     
-    // don't think I like grouping together these in a struct, because multiple combinations are possible, 
-    // it's too specific and has potential ownership issues later on. Will keep for now as learning history. 
-    struct TriangleGeometry
-    {
-        unsigned int VAO = 0;
-        unsigned int VBO = 0;
-    };
-    
-    // moved this out to get a better overview of the steps, but feels like the function is to rigid 
-    TriangleGeometry CreateTriangleGeometry()
-    {
-        float vertices[] = {
-            -0.5f, -0.5f, 0.0f,
-             0.5f, -0.5f, 0.0f,
-             0.0f,  0.5f, 0.0f
-        };  
-        
-        TriangleGeometry triangle{};
-        
-        glGenVertexArrays(1, &triangle.VAO);
-        glGenBuffers(1, &triangle.VBO);  
-        
-        glBindVertexArray(triangle.VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, triangle.VBO); 
-        
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        
-        glVertexAttribPointer(
-            0,                   // Attribute location.
-            3,                   // x, y, z.
-            GL_FLOAT,
-            GL_FALSE,
-            3 * sizeof(float),   // Distance between positions.
-            (void*)0             // Starting offset.
-        );
-        glEnableVertexAttribArray(0);
-        
-        // unbind VBO and VAO to clear what is being selected 
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-        
-        return triangle;
-    }
-    
-    void DestroyTriangleGeometry(TriangleGeometry& triangle)
-    {
-        glDeleteVertexArrays(1, &triangle.VAO);
-        glDeleteBuffers(1, &triangle.VBO);
-
-        triangle = {};
-    }
-    
-    
     
     // second iteration of the CreateTriangleGeometry() function, goal to be more generic and reusable, 
     // but this is still probably a bad or at least not well-made function  
@@ -176,7 +127,6 @@ namespace
         // unbind VBO and VAO to clear what is being selected, no relying on selections surviving between functions 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
-        
     }
     
     
@@ -254,8 +204,17 @@ int main(int argc, char **argv) {
     glDeleteShader(fragmentShader);
     
     
+    
     // Triangle test 
-    //TriangleGeometry triangle = CreateTriangleGeometry();
+    float triangleVertices[] = {
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+         0.0f,  0.5f, 0.0f
+    };  
+    
+    unsigned int triangleVAO = 0;
+    unsigned int triangleVBO = 0;
+    CreatePositionOnlyGeometry(triangleVAO, triangleVBO, triangleVertices, sizeof(triangleVertices));
     
     
     // Rectangle test
@@ -270,14 +229,13 @@ int main(int argc, char **argv) {
         1, 2, 3    // second triangle
     };  
     
-    unsigned int VAO = 0;
-    unsigned int VBO = 0;
-
-    CreatePositionOnlyGeometry(VAO, VBO, vertices, sizeof(vertices));
+    unsigned int rectangleVAO = 0;
+    unsigned int rectangleVBO = 0;
+    CreatePositionOnlyGeometry(rectangleVAO, rectangleVBO, vertices, sizeof(vertices));
     
     unsigned int EBO;
     glGenBuffers(1, &EBO);
-    glBindVertexArray(VAO);
+    glBindVertexArray(rectangleVAO);
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); 
@@ -285,8 +243,12 @@ int main(int argc, char **argv) {
     glBindVertexArray(0);
     
     
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
     
-    
+    // face culling
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
     
     // render loop
     while(!glfwWindowShouldClose(window))
@@ -295,27 +257,34 @@ int main(int argc, char **argv) {
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-    
+        
         // activate program
         glUseProgram(shaderProgram);
         
+        float timeValue = glfwGetTime();
+        float greenValue = sin(timeValue) / 2.0f + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+        
         // Triangle test
-        //glBindVertexArray(triangle.VAO);
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(triangleVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
         
         // Rectangle test
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //glBindVertexArray(rectangleVAO);
+        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
         glfwSwapBuffers(window);
         glfwPollEvents();    
     }
     
-    
-    //DestroyTriangleGeometry(triangle);
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    // also delete EBO? fix next day 
+    // Triangle cleanup
+    glDeleteVertexArrays(1, &triangleVAO);
+    glDeleteBuffers(1, &triangleVBO);
+    // Rectangle cleanup 
+    glDeleteVertexArrays(1, &rectangleVAO);
+    glDeleteBuffers(1, &rectangleVBO);
+    glDeleteBuffers(1, &EBO);
     
     glDeleteProgram(shaderProgram);
     glfwDestroyWindow(window);
