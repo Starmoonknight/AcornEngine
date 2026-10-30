@@ -31,6 +31,13 @@ target("Acorn")
     add_packages("glfw")
     add_packages("glm")
     add_packages("glad") 
+    
+ 
+after_build(function (target)
+    local shaderdir = path.join(target:targetdir(), "shaders")
+    os.mkdir(shaderdir)
+    os.cp(path.join(os.projectdir(), "shaders", "*"), shaderdir)
+end)
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
