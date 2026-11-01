@@ -78,6 +78,32 @@ namespace
 }
 
 
+void DrawTriangle(Shader shader, 
+                  float posX, float posY, 
+                  float scaleX, float scaleY, 
+                  float rotation,
+                  bool colorOverride = false, float red = 1, float green = 1, float blue = 1)
+{
+    
+    int positionLocation = glGetUniformLocation(shader.ID, "uPosition");
+    int scaleLocation = glGetUniformLocation(shader.ID, "uScale");
+    int rotationLocation = glGetUniformLocation(shader.ID, "uRotation");
+    
+    int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
+    int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
+    
+    glUniform3f(positionLocation, posX, posY, 1.0f);
+    glUniform3f(scaleLocation, scaleX, scaleY, 1.0f);
+    glUniform1f(rotationLocation, rotation);
+    
+    glUniform1i(overrideLocation, colorOverride);
+    glUniform3f(colorLocation, red, green, blue);
+    
+    
+    
+    
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
 
 
 
@@ -123,7 +149,6 @@ int main(int argc, char **argv) {
     glEnableVertexAttribArray(1);
     
     
-    
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
     
@@ -145,7 +170,8 @@ int main(int argc, char **argv) {
         
         // Triangle test
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, 0.0f);    // rainbow triangle 
+        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, 0.0f, true, 0.2f, 0.0f, 0.3f);  // purple triangle
         
         glfwSwapBuffers(window);
         glfwPollEvents();    
@@ -160,4 +186,5 @@ int main(int argc, char **argv) {
     glfwTerminate();
     return 0;
 }
+
 
