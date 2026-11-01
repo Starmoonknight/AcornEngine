@@ -31,6 +31,7 @@ target("Acorn")
     add_packages("glfw")
     add_packages("glm")
     add_packages("glad") 
+    add_extrafiles("shaders/**.vert", "shaders/**.frag")
     
  
 after_build(function (target)
