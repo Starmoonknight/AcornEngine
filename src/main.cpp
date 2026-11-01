@@ -84,7 +84,6 @@ void DrawTriangle(Shader shader,
                   float rotation,
                   bool colorOverride = false, float red = 1, float green = 1, float blue = 1)
 {
-    
     int positionLocation = glGetUniformLocation(shader.ID, "uPosition");
     int scaleLocation = glGetUniformLocation(shader.ID, "uScale");
     int rotationLocation = glGetUniformLocation(shader.ID, "uRotation");
@@ -92,19 +91,26 @@ void DrawTriangle(Shader shader,
     int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
     int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
     
-    glUniform3f(positionLocation, posX, posY, 1.0f);
+    glUniform3f(positionLocation, posX, posY, 0.0f);
     glUniform3f(scaleLocation, scaleX, scaleY, 1.0f);
     glUniform1f(rotationLocation, rotation);
     
     glUniform1i(overrideLocation, colorOverride);
     glUniform3f(colorLocation, red, green, blue);
     
-    
-    
-    
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
+
+void DrawRectangle(Shader shader, 
+                  float posX, float posY, 
+                  float scaleX, float scaleY, 
+                  float rotation,
+                  bool colorOverride = false, float red = 1, float green = 1, float blue = 1)
+{
+    DrawTriangle(shader, posX, posY, scaleX, scaleY, rotation, colorOverride, red, green, blue);
+    DrawTriangle(shader, posX, posY, -scaleX, -scaleY, rotation, colorOverride, red, green, blue);
+}
 
 
 
@@ -131,7 +137,7 @@ int main(int argc, char **argv) {
         // positions         // colors
         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
-        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
+        -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
    };  
     
     unsigned int VBO, VAO;
@@ -157,21 +163,158 @@ int main(int argc, char **argv) {
     //glCullFace(GL_BACK);
     
     
+    
+    float testRotation = 0.0f;
+    
+    bool bPreviousSpacePress = false; 
+    bool bHideRainbowRoofColor = true;
+    
+    bool bPreviousEnterPress = false; 
+    bool bCrazyHouse = false; 
+    
+    
+    bool bPreviousQPress = false; 
+    bool bShowEyballs = false;
+    
+    float eyeMoveIncrement = 0.008f;
+    float currentEyeMovement = 0.0f; 
+    float maxRightMovement = 0.16f;
+    float maxLeftMovement = -0.16f;
+    bool bGoingRight = true;
+    
+    
+    
+    float red[3]  = {1.0f, 0.0f, 0.0f};
+    float magenta[3] = {1.0f, 0.0f, 1.0f};
+    float pink[3] = {1.0f, 0.75f, 0.8f};
+    float orange[3] = {1.0f, 0.5f, 0.0f};
+    
+    float blue[3]  = {0.0f, 0.0f, 1.0f};
+    float navy[3] = {0.0f, 0.0f, 0.5f};
+    float cyan[3] = {0.0f, 1.0f, 1.0f};
+    float teal[3] = {0.0f, 0.5f, 0.5f};
+    float purple[3] = {0.5f, 0.0f, 0.5f};
+    
+    float green[3]  = {0.0f, 1.0f, 0.0f};
+    float forestGreen[3] = {0.13f, 0.55f, 0.13f};
+    
+    float black[3] = {0.0f, 0.0f, 0.0f};
+    float white[3] = {1.0f, 1.0f, 1.0f};
+    
+    
+    
     // render loop
     while(!glfwWindowShouldClose(window))
     {
         processInput(window);
         
+        bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        bool currentEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
+        
+        if (currentSpace && !bPreviousSpacePress)
+        {
+            bHideRainbowRoofColor = !bHideRainbowRoofColor;
+        }
+        bPreviousSpacePress = currentSpace;
+        
+        if (bHideRainbowRoofColor == false && currentEnter && !bPreviousEnterPress)
+        {
+            bCrazyHouse = !bCrazyHouse;
+        }
+        bPreviousEnterPress = currentSpace;
+        
+        if (currentQ && !bPreviousQPress)
+        {
+            bShowEyballs = !bShowEyballs;
+        }
+        bPreviousQPress = currentQ;
+        
+        
+        
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        
+        if (bHideRainbowRoofColor == false)
+        {
+            if (bGoingRight == true)
+            {
+                if (currentEyeMovement > maxRightMovement)
+                {
+                    bGoingRight = false;
+                }
+                currentEyeMovement += eyeMoveIncrement;
+            }
+            else
+            {
+                if (currentEyeMovement < maxLeftMovement)
+                {
+                    bGoingRight = true;
+                }
+                currentEyeMovement -= eyeMoveIncrement;
+            }
+            
+            if (bCrazyHouse == true)
+            {
+                testRotation += 0.01f;
+                if (testRotation >= 360.0f)
+                {
+                    testRotation = 0.0f;
+                }                
+            }
+            else
+            {
+                testRotation = 0.0f;
+            }
+        }
+        else
+        {
+            currentEyeMovement = 0.0f;
+            testRotation = 0.0f;
+            bCrazyHouse = false;
+        }
+        
+        
         
         // activate program
         ourShader.use(); 
         
+        
         // Triangle test
         glBindVertexArray(VAO);
-        DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, 0.0f);    // rainbow triangle 
-        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, 0.0f, true, 0.2f, 0.0f, 0.3f);  // purple triangle
+        
+        //house shape
+        DrawRectangle(ourShader, 0.0f, -0.4f,  1.2f,  0.8f, testRotation, true, orange[0], orange[1], orange[2]); 
+        DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, -2.356194f, bHideRainbowRoofColor, magenta[0], magenta[1], magenta[2]); 
+        //windows
+        DrawRectangle(ourShader, -0.25f, -0.2f, 0.3f, 0.2f, -testRotation, true, teal[0], teal[1], teal[2]);
+        DrawRectangle(ourShader, 0.25f, -0.2f, 0.3f, 0.2f, -testRotation, true, teal[0], teal[1], teal[2]);
+        // door
+        DrawRectangle(ourShader, 0.0f, -0.6f,  0.2f,  0.3f, testRotation, true, forestGreen[0], forestGreen[1], forestGreen[2]);
+        DrawRectangle(ourShader, 0.05f, -0.6f,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
+        
+        //eyes
+        if (bShowEyballs == true)
+        {
+            DrawRectangle(ourShader, -0.25f + currentEyeMovement, -0.2f,  0.09f,  0.09f, testRotation, true, white[0], white[1], white[2]);
+            DrawRectangle(ourShader, -0.25f + currentEyeMovement, -0.2f,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
+            DrawRectangle(ourShader, 0.25f, -0.2f + currentEyeMovement,  0.09f,  0.09f, testRotation, true, white[0], white[1], white[2]);
+            DrawRectangle(ourShader, 0.25f, -0.2f + currentEyeMovement,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
+            
+            
+        }
+        
+        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f,testRotation);    // rainbow triangle 
+        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, 0.0f, true, 0.2f, 0.0f, 0.3f);           // purple triangle
+        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f,testRotation, true, teal[0], teal[1], teal[2]);   // sad triangle   
+        
+        //DrawRectangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, testRotation); 
+        
+        //testRotation += 0.01f;
+        //if (testRotation >= 360.0f)
+        //{
+        //    testRotation = 0.0f;
+        //}
         
         glfwSwapBuffers(window);
         glfwPollEvents();    
