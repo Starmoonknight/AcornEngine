@@ -101,6 +101,20 @@ void DrawTriangle(Shader shader,
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
+void CheckOpenGLErrors(const char* stage)
+{
+    GLenum error = glGetError();
+
+    while (error != GL_NO_ERROR)
+    {
+        std::cerr << "OpenGL error after " << stage
+                  << ": " << error << '\n';
+
+        error = glGetError();
+    }
+}
+
+
 
 void DrawRectangle(Shader shader, 
                   float posX, float posY, 
@@ -154,6 +168,7 @@ int main(int argc, char **argv) {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
     glEnableVertexAttribArray(1);
     
+    CheckOpenGLErrors("triangle geometry setup");
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
@@ -206,6 +221,8 @@ int main(int argc, char **argv) {
     // render loop
     while(!glfwWindowShouldClose(window))
     {
+        CheckOpenGLErrors("drawing the house");
+        
         processInput(window);
         
         bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
