@@ -13,9 +13,59 @@ namespace
     constexpr int WindowWidth = 800;
     constexpr int WindowHeight = 600;
     
+    // gets GLFW errors, automatic
     void glfwErrorCallback(int error, const char* description)
     {
         std::cerr << "GLFW error (" << error << "): " << description << '\n';
+    }
+    
+    // gets GLFW errors, automatic      (not in use, just looking at setup)
+    void APIENTRY OpenGLDebugCallback(
+        GLenum source,
+        GLenum type,
+        GLuint id,
+        GLenum severity,
+        GLsizei length,
+        const GLchar* message,
+        const void* userParam)
+    {
+        std::cerr << "[OpenGL]["
+                  << (type == GL_DEBUG_TYPE_ERROR ? "Error" : "Debug")
+                  << "][ID " << id << "] "
+                  << message << '\n';
+    }
+    
+    // some common error types as text 
+    const char* OpenGLErrorName(GLenum error)
+    {
+        switch (error)
+        {
+        case GL_INVALID_ENUM:      return "GL_INVALID_ENUM";
+        case GL_INVALID_VALUE:     return "GL_INVALID_VALUE";
+        case GL_INVALID_OPERATION: return "GL_INVALID_OPERATION";
+        case GL_OUT_OF_MEMORY:     return "GL_OUT_OF_MEMORY";
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            return "GL_INVALID_FRAMEBUFFER_OPERATION";
+        default:
+            return "Unknown OpenGL error";
+        }
+    }
+    
+    // gets OpenGl errors, manual check
+    void CheckOpenGLErrors(const char* stage)
+    {
+        // returns and clears one pending error flag
+        GLenum error = glGetError();
+
+        // print every error together with the context stage text  
+        while (error != GL_NO_ERROR)
+        {
+            std::cerr << "[OpenGL][" << stage << "] "
+                  << OpenGLErrorName(error)
+                  << " (" << error << ")\n";
+            
+            error = glGetError();
+        }
     }
     
     void framebufferSizeCallback(GLFWwindow* window, int width, int height)
@@ -26,7 +76,10 @@ namespace
     
     bool InitializeProgram()
     {
+        // link function GLFW calls when error happens, 
+        // set before glfwInit lets it report initialization errors 
         glfwSetErrorCallback(glfwErrorCallback);
+        
         if (glfwInit() != GLFW_TRUE)
         {
             std::cout << "Failed to initialize GLFW." << '\n';
@@ -43,9 +96,13 @@ namespace
     
         return true;
     }
-
+    
     GLFWwindow* CreateWindow()
     {
+        //       (not in use, just looking at setup)
+        // setting up a callback on errors for OpenGL, before creating window/context: 
+        //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+        
         GLFWwindow *window = glfwCreateWindow(WindowWidth, WindowHeight, "Hello World", nullptr, nullptr);
         if (window == nullptr)
         {
@@ -53,15 +110,21 @@ namespace
             return nullptr;
         }
         glfwMakeContextCurrent(window);
-    
+        
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
             std::cout << "Failed to initialize GLAD\n";
         
             glfwDestroyWindow(window);
-            return window;
+            return nullptr;
         }
-    
+        
+        //       (not in use, just looking at setup)
+        // setting up a callback on errors for OpenGL, after the context is current and GLAD successfully loaded:
+        //glEnable(GL_DEBUG_OUTPUT);
+        //glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        //glDebugMessageCallback(OpenGLDebugCallback, nullptr);
+        
         glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     
         return window; 
@@ -76,6 +139,7 @@ namespace
         }
     }
 }
+
 
 
 void DrawTriangle(Shader shader, 
@@ -97,21 +161,10 @@ void DrawTriangle(Shader shader,
     
     glUniform1i(overrideLocation, colorOverride);
     glUniform3f(colorLocation, red, green, blue);
+    CheckOpenGLErrors("setting triangle Uniform's");
     
     glDrawArrays(GL_TRIANGLES, 0, 3);
-}
-
-void CheckOpenGLErrors(const char* stage)
-{
-    GLenum error = glGetError();
-
-    while (error != GL_NO_ERROR)
-    {
-        std::cerr << "OpenGL error after " << stage
-                  << ": " << error << '\n';
-
-        error = glGetError();
-    }
+    CheckOpenGLErrors("drawing triangle");
 }
 
 
@@ -147,11 +200,22 @@ int main(int argc, char **argv) {
     Shader ourShader("shaders/basic.vert", "shaders/basic.frag");
     
     
+    if (!ourShader.IsValid())
+    {
+        std::cerr << "[Startup] Required shader failed; exiting.\n";
+        
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+    
+    CheckOpenGLErrors("shader setup");
+    
     float vertices[] = {
         // positions         // colors
-        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
-        -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
+        -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
    };  
     
     unsigned int VBO, VAO;
@@ -161,14 +225,15 @@ int main(int argc, char **argv) {
     
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    CheckOpenGLErrors("triangle geometry buffer setup");
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     // color attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
     glEnableVertexAttribArray(1);
+    CheckOpenGLErrors("triangle geometry attribute setup");
     
-    CheckOpenGLErrors("triangle geometry setup");
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
@@ -198,7 +263,7 @@ int main(int argc, char **argv) {
     bool bGoingRight = true;
     
     
-    
+    // colors 
     float red[3]  = {1.0f, 0.0f, 0.0f};
     float magenta[3] = {1.0f, 0.0f, 1.0f};
     float pink[3] = {1.0f, 0.75f, 0.8f};
@@ -221,8 +286,6 @@ int main(int argc, char **argv) {
     // render loop
     while(!glfwWindowShouldClose(window))
     {
-        CheckOpenGLErrors("drawing the house");
-        
         processInput(window);
         
         bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
@@ -239,7 +302,7 @@ int main(int argc, char **argv) {
         {
             bCrazyHouse = !bCrazyHouse;
         }
-        bPreviousEnterPress = currentSpace;
+        bPreviousEnterPress = currentEnter;
         
         if (currentQ && !bPreviousQPress)
         {
@@ -292,13 +355,13 @@ int main(int argc, char **argv) {
         }
         
         
-        
         // activate program
         ourShader.use(); 
         
-        
         // Triangle test
         glBindVertexArray(VAO);
+        CheckOpenGLErrors("frame clear, shader activation and VAO binding");
+        
         
         //house shape
         DrawRectangle(ourShader, 0.0f, -0.4f,  1.2f,  0.8f, testRotation, true, orange[0], orange[1], orange[2]); 
@@ -317,8 +380,6 @@ int main(int argc, char **argv) {
             DrawRectangle(ourShader, -0.25f + currentEyeMovement, -0.2f,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
             DrawRectangle(ourShader, 0.25f, -0.2f + currentEyeMovement,  0.09f,  0.09f, testRotation, true, white[0], white[1], white[2]);
             DrawRectangle(ourShader, 0.25f, -0.2f + currentEyeMovement,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
-            
-            
         }
         
         //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f,testRotation);    // rainbow triangle 
