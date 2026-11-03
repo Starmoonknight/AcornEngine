@@ -46,6 +46,7 @@ namespace
     constexpr int WindowWidth = 800;
     constexpr int WindowHeight = 600;
     
+    
     // gets GLFW errors, automatic
     void glfwErrorCallback(int error, const char* description)
     {
@@ -182,6 +183,7 @@ namespace
 
 
 
+
 void DrawTriangle(const ShaderProgram& shader, 
     glm::vec2 position, glm::vec2 scale, float rotationRad, 
     bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
@@ -210,7 +212,6 @@ void DrawTriangle(const ShaderProgram& shader,
 }
 
 
-
 void DrawRectangle(const ShaderProgram& shader, 
     glm::vec2 position, glm::vec2 scale, float rotationRad, 
     bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
@@ -218,6 +219,157 @@ void DrawRectangle(const ShaderProgram& shader,
     DrawTriangle(shader, position, scale, rotationRad, colorOverride, color);
     DrawTriangle(shader, position, -scale, rotationRad, colorOverride, color);
 }
+
+
+
+
+void CreateTriangleGeometry(unsigned int& VBO, unsigned int& VAO)
+{
+    float vertices[] = {
+        // positions         // colors
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
+       -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
+       -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
+   };  
+    
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    CheckOpenGLErrors("triangle geometry buffer setup");
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
+    CheckOpenGLErrors("triangle geometry attribute setup");
+}
+
+void DrawHouse2D(const ShaderProgram& shader,  float testRotation, bool bHideRainbowRoofColor)
+{
+    //house shape
+    DrawRectangle(shader, glm::vec2(0.0f, -0.4f),  glm::vec2(1.2f,  0.8f), glm::radians(testRotation), true, Palette::orange); 
+    DrawTriangle(shader, glm::vec2(0.0f, 0.0f),  glm::vec2(1.0f,  1.0f), glm::radians(-135.0f), bHideRainbowRoofColor, Palette::magenta); 
+    //windows
+    DrawRectangle(shader, glm::vec2(-0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
+    DrawRectangle(shader, glm::vec2(0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
+    // door
+    DrawRectangle(shader, glm::vec2(0.0f, -0.6f),  glm::vec2(0.2f,  0.3f), glm::radians(testRotation), true, Palette::forestGreen);
+    DrawRectangle(shader, glm::vec2(0.05f, -0.6f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
+       
+}
+
+void DrawCrazyHouse2D(const ShaderProgram& shader,  float testRotation, bool bHideRainbowRoofColor, bool bShowEyballs, float currentEyeMovement)
+{ 
+    DrawHouse2D(shader, testRotation, bHideRainbowRoofColor);
+    
+    //eyes
+    if (bShowEyballs == true)
+    {
+        DrawRectangle(shader, glm::vec2(-0.25f + currentEyeMovement, -0.2f),  glm::vec2(0.09f,  0.09f), glm::radians(testRotation), true, Palette::white);
+        DrawRectangle(shader, glm::vec2(-0.25f + currentEyeMovement, -0.2f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
+        DrawRectangle(shader, glm::vec2(0.25f, -0.2f + currentEyeMovement),  glm::vec2(0.09f,  0.09f), glm::radians(testRotation), true, Palette::white);
+        DrawRectangle(shader, glm::vec2(0.25f, -0.2f + currentEyeMovement),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
+    }
+}
+
+struct HouseRuntimeInfo
+{
+    // runtime changing values 
+    float testRotation = 0.0f;
+    
+    bool bPreviousSpacePress = false; 
+    bool bHideRainbowRoofColor = true;
+    
+    bool bPreviousEnterPress = false; 
+    bool bCrazyHouse = false; 
+    
+    
+    bool bPreviousQPress = false; 
+    bool bShowEyballs = false;
+    
+    float eyeMoveIncrement = 0.008f;
+    float currentEyeMovement = 0.0f; 
+    float maxRightMovement = 0.16f;
+    float maxLeftMovement = -0.16f;
+    bool bGoingRight = true;
+};
+
+void UpdateCrazyHouse2D(GLFWwindow* window, ShaderProgram& houseShader, HouseRuntimeInfo& house)
+{
+    
+        // key presses
+        bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        bool currentEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
+        
+        if (currentSpace && !house.bPreviousSpacePress)
+        {
+            house.bHideRainbowRoofColor = !house.bHideRainbowRoofColor;
+        }
+        house.bPreviousSpacePress = currentSpace;
+        
+        if (house.bHideRainbowRoofColor == false && currentEnter && !house.bPreviousEnterPress)
+        {
+            house.bCrazyHouse = !house.bCrazyHouse;
+        }
+        house.bPreviousEnterPress = currentEnter;
+        
+        if (currentQ && !house.bPreviousQPress)
+        {
+            house.bShowEyballs = !house.bShowEyballs;
+        }
+        house.bPreviousQPress = currentQ;
+        
+        
+        // house roof color changing, and eyeballs 
+        if (house.bHideRainbowRoofColor == false)
+        {
+            if (house.bGoingRight == true)
+            {
+                if (house.currentEyeMovement > house.maxRightMovement)
+                {
+                    house.bGoingRight = false;
+                }
+                house.currentEyeMovement += house.eyeMoveIncrement;
+            }
+            else
+            {
+                if (house.currentEyeMovement < house.maxLeftMovement)
+                {
+                    house.bGoingRight = true;
+                }
+                house.currentEyeMovement -= house.eyeMoveIncrement;
+            }
+            
+            if (house.bCrazyHouse == true)
+            {
+                house.testRotation += 0.6f;
+                if (house.testRotation >= 360.0f)
+                {
+                    house.testRotation = 0.0f;
+                }                
+            }
+            else
+            {
+                house.testRotation = 0.0f;
+            }
+        }
+        else
+        {
+            house.currentEyeMovement = 0.0f;
+            house.testRotation = 0.0f;
+            house.bCrazyHouse = false;
+        }
+    
+        DrawCrazyHouse2D(houseShader, house.testRotation, house.bHideRainbowRoofColor, house.bShowEyballs, house.currentEyeMovement);
+}
+
+
+
 
 
 
@@ -250,28 +402,8 @@ int main(int argc, char **argv) {
     CheckOpenGLErrors("shader setup");
     
     
-    float vertices[] = {
-        // positions         // colors
-        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
-       -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
-       -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
-   };  
-    
     unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    CheckOpenGLErrors("triangle geometry buffer setup");
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-    glEnableVertexAttribArray(1);
-    CheckOpenGLErrors("triangle geometry attribute setup");
+    CreateTriangleGeometry(VBO, VAO);
     
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
@@ -282,24 +414,9 @@ int main(int argc, char **argv) {
     //glCullFace(GL_BACK);
     
     
+    
     // runtime changing values 
-    float testRotation = 0.0f;
-    
-    bool bPreviousSpacePress = false; 
-    bool bHideRainbowRoofColor = true;
-    
-    bool bPreviousEnterPress = false; 
-    bool bCrazyHouse = false; 
-    
-    
-    bool bPreviousQPress = false; 
-    bool bShowEyballs = false;
-    
-    float eyeMoveIncrement = 0.008f;
-    float currentEyeMovement = 0.0f; 
-    float maxRightMovement = 0.16f;
-    float maxLeftMovement = -0.16f;
-    bool bGoingRight = true;
+    HouseRuntimeInfo houseInfo = {}; 
     
     
     // render loop
@@ -310,72 +427,6 @@ int main(int argc, char **argv) {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        
-        // key presses
-        bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-        bool currentEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
-        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
-        
-        if (currentSpace && !bPreviousSpacePress)
-        {
-            bHideRainbowRoofColor = !bHideRainbowRoofColor;
-        }
-        bPreviousSpacePress = currentSpace;
-        
-        if (bHideRainbowRoofColor == false && currentEnter && !bPreviousEnterPress)
-        {
-            bCrazyHouse = !bCrazyHouse;
-        }
-        bPreviousEnterPress = currentEnter;
-        
-        if (currentQ && !bPreviousQPress)
-        {
-            bShowEyballs = !bShowEyballs;
-        }
-        bPreviousQPress = currentQ;
-        
-        
-        // house roof color changing, and eyeballs 
-        if (bHideRainbowRoofColor == false)
-        {
-            if (bGoingRight == true)
-            {
-                if (currentEyeMovement > maxRightMovement)
-                {
-                    bGoingRight = false;
-                }
-                currentEyeMovement += eyeMoveIncrement;
-            }
-            else
-            {
-                if (currentEyeMovement < maxLeftMovement)
-                {
-                    bGoingRight = true;
-                }
-                currentEyeMovement -= eyeMoveIncrement;
-            }
-            
-            if (bCrazyHouse == true)
-            {
-                testRotation += 0.6f;
-                if (testRotation >= 360.0f)
-                {
-                    testRotation = 0.0f;
-                }                
-            }
-            else
-            {
-                testRotation = 0.0f;
-            }
-        }
-        else
-        {
-            currentEyeMovement = 0.0f;
-            testRotation = 0.0f;
-            bCrazyHouse = false;
-        }
-        
-        
         // activate program
         ourShader.use(); 
         
@@ -384,24 +435,7 @@ int main(int argc, char **argv) {
         CheckOpenGLErrors("frame clear, shader activation and VAO binding");
         
         
-        //house shape
-        DrawRectangle(ourShader, glm::vec2(0.0f, -0.4f),  glm::vec2(1.2f,  0.8f), glm::radians(testRotation), true, Palette::orange); 
-        DrawTriangle(ourShader, glm::vec2(0.0f, 0.0f),  glm::vec2(1.0f,  1.0f), glm::radians(-135.0f), bHideRainbowRoofColor, Palette::magenta); 
-        //windows
-        DrawRectangle(ourShader, glm::vec2(-0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
-        DrawRectangle(ourShader, glm::vec2(0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
-        // door
-        DrawRectangle(ourShader, glm::vec2(0.0f, -0.6f),  glm::vec2(0.2f,  0.3f), glm::radians(testRotation), true, Palette::forestGreen);
-        DrawRectangle(ourShader, glm::vec2(0.05f, -0.6f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
-        
-        //eyes
-        if (bShowEyballs == true)
-        {
-            DrawRectangle(ourShader, glm::vec2(-0.25f + currentEyeMovement, -0.2f),  glm::vec2(0.09f,  0.09f), glm::radians(testRotation), true, Palette::white);
-            DrawRectangle(ourShader, glm::vec2(-0.25f + currentEyeMovement, -0.2f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
-            DrawRectangle(ourShader, glm::vec2(0.25f, -0.2f + currentEyeMovement),  glm::vec2(0.09f,  0.09f), glm::radians(testRotation), true, Palette::white);
-            DrawRectangle(ourShader, glm::vec2(0.25f, -0.2f + currentEyeMovement),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
-        }
+        UpdateCrazyHouse2D(window, ourShader, houseInfo);
         
         
         glfwSwapBuffers(window);
