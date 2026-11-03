@@ -1,7 +1,7 @@
 
 #version 460 core
 
-in vec3 ourColor;
+in vec3 outColor;
 out vec4 FragColor;
 
 uniform bool uColorOverride = false;
@@ -15,6 +15,6 @@ void main()
     }
     else
     {        
-        FragColor = vec4(ourColor, 1.0);
+        FragColor = vec4(outColor, 1.0);
     }
 }

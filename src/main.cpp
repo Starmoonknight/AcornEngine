@@ -1,18 +1,50 @@
-#include <cassert>
-#include <cstddef>
-#include <glad/glad.h>
-#include <glfw/glfw3.h>
-#include <iostream>
-#include <cmath>
+// Project headers
+#include "ShaderProgram.h" 
 
-#include "Shader.h" 
+// Standard Library
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <iostream>
+
+// Third-party libraries - OpenGL
+#include <glad/glad.h>                  // glad include should be before GLFW include 
+#include <glfw/glfw3.h>
+
+// Third-party libraries - GLM
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+
+namespace Palette
+{
+    // Colours
+    const glm::vec3 red         {1.0f,  0.0f,  0.0f};
+    const glm::vec3 magenta     {1.0f,  0.0f,  1.0f};
+    const glm::vec3 pink        {1.0f,  0.75f, 0.8f};
+    const glm::vec3 orange      {1.0f,  0.5f,  0.0f};
+
+    const glm::vec3 blue        {0.0f,  0.0f,  1.0f};
+    const glm::vec3 navy        {0.0f,  0.0f,  0.5f};
+    const glm::vec3 cyan        {0.0f,  1.0f,  1.0f};
+    const glm::vec3 teal        {0.0f,  0.5f,  0.5f};
+    const glm::vec3 purple      {0.5f,  0.0f,  0.5f};
+
+    const glm::vec3 green       {0.0f,  1.0f,  0.0f};
+    const glm::vec3 forestGreen {0.13f, 0.55f, 0.13f};
+
+    const glm::vec3 black       {0.0f,  0.0f,  0.0f};
+    const glm::vec3 white       {1.0f,  1.0f,  1.0f};
+}
+
 
 
 namespace
 {
     constexpr int WindowWidth = 800;
     constexpr int WindowHeight = 600;
-    
     
     // gets GLFW errors, automatic
     void glfwErrorCallback(int error, const char* description)
@@ -137,7 +169,7 @@ namespace
     
         return window; 
     }
-        
+    
     
     void processInput(GLFWwindow* window)
     {
@@ -150,12 +182,10 @@ namespace
 
 
 
-void DrawTriangle(Shader shader, 
-                  float posX, float posY, 
-                  float scaleX, float scaleY, 
-                  float rotation,
-                  bool colorOverride = false, float red = 1, float green = 1, float blue = 1)
-{
+void DrawTriangle(const ShaderProgram& shader, 
+    glm::vec2 position, glm::vec2 scale, float rotationRad, 
+    bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
+{    
     int positionLocation = glGetUniformLocation(shader.ID, "uPosition");
     int scaleLocation = glGetUniformLocation(shader.ID, "uScale");
     int rotationLocation = glGetUniformLocation(shader.ID, "uRotation");
@@ -163,13 +193,17 @@ void DrawTriangle(Shader shader,
     int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
     int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
     
-    glUniform3f(positionLocation, posX, posY, 0.0f);
-    glUniform3f(scaleLocation, scaleX, scaleY, 1.0f);
-    glUniform1f(rotationLocation, rotation);
+    glm::vec3 position3D(position, 0.0f);
+    glm::vec3 scale3D(scale, 1.0f);
+    
+    // updates uniforms on the currently active program using the saved uniform locations 
+    glUniform3fv(positionLocation, 1, glm::value_ptr(position3D));      // needed to be sent in as pointer instead of directly vector 
+    glUniform3fv(scaleLocation, 1, glm::value_ptr(scale3D));
+    glUniform1f(rotationLocation, rotationRad);
     
     glUniform1i(overrideLocation, colorOverride);
-    glUniform3f(colorLocation, red, green, blue);
-    CheckOpenGLErrors("setting triangle Uniform's");
+    glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
+    CheckOpenGLErrors("setting triangle Uniform's");                        // Assumes the triangle's VAO is already bound.
     
     glDrawArrays(GL_TRIANGLES, 0, 3);
     CheckOpenGLErrors("drawing triangle");
@@ -177,14 +211,12 @@ void DrawTriangle(Shader shader,
 
 
 
-void DrawRectangle(Shader shader, 
-                  float posX, float posY, 
-                  float scaleX, float scaleY, 
-                  float rotation,
-                  bool colorOverride = false, float red = 1, float green = 1, float blue = 1)
+void DrawRectangle(const ShaderProgram& shader, 
+    glm::vec2 position, glm::vec2 scale, float rotationRad, 
+    bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
 {
-    DrawTriangle(shader, posX, posY, scaleX, scaleY, rotation, colorOverride, red, green, blue);
-    DrawTriangle(shader, posX, posY, -scaleX, -scaleY, rotation, colorOverride, red, green, blue);
+    DrawTriangle(shader, position, scale, rotationRad, colorOverride, color);
+    DrawTriangle(shader, position, -scale, rotationRad, colorOverride, color);
 }
 
 
@@ -205,9 +237,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     
-    Shader ourShader("shaders/basic.vert", "shaders/basic.frag");
-    
-    
+    ShaderProgram ourShader("shaders/basic.vert", "shaders/basic.frag");
     if (!ourShader.IsValid())
     {
         std::cerr << "[Startup] Required shader failed; exiting.\n";
@@ -219,11 +249,12 @@ int main(int argc, char **argv) {
     
     CheckOpenGLErrors("shader setup");
     
+    
     float vertices[] = {
         // positions         // colors
-       -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
-        -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
+       -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
+       -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
    };  
     
     unsigned int VBO, VAO;
@@ -251,7 +282,7 @@ int main(int argc, char **argv) {
     //glCullFace(GL_BACK);
     
     
-    
+    // runtime changing values 
     float testRotation = 0.0f;
     
     bool bPreviousSpacePress = false; 
@@ -271,31 +302,16 @@ int main(int argc, char **argv) {
     bool bGoingRight = true;
     
     
-    // colors 
-    float red[3]  = {1.0f, 0.0f, 0.0f};
-    float magenta[3] = {1.0f, 0.0f, 1.0f};
-    float pink[3] = {1.0f, 0.75f, 0.8f};
-    float orange[3] = {1.0f, 0.5f, 0.0f};
-    
-    float blue[3]  = {0.0f, 0.0f, 1.0f};
-    float navy[3] = {0.0f, 0.0f, 0.5f};
-    float cyan[3] = {0.0f, 1.0f, 1.0f};
-    float teal[3] = {0.0f, 0.5f, 0.5f};
-    float purple[3] = {0.5f, 0.0f, 0.5f};
-    
-    float green[3]  = {0.0f, 1.0f, 0.0f};
-    float forestGreen[3] = {0.13f, 0.55f, 0.13f};
-    
-    float black[3] = {0.0f, 0.0f, 0.0f};
-    float white[3] = {1.0f, 1.0f, 1.0f};
-    
-    
-    
     // render loop
     while(!glfwWindowShouldClose(window))
     {
         processInput(window);
         
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        
+        
+        // key presses
         bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
         bool currentEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
         bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
@@ -319,10 +335,7 @@ int main(int argc, char **argv) {
         bPreviousQPress = currentQ;
         
         
-        
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
+        // house roof color changing, and eyeballs 
         if (bHideRainbowRoofColor == false)
         {
             if (bGoingRight == true)
@@ -344,7 +357,7 @@ int main(int argc, char **argv) {
             
             if (bCrazyHouse == true)
             {
-                testRotation += 0.01f;
+                testRotation += 0.6f;
                 if (testRotation >= 360.0f)
                 {
                     testRotation = 0.0f;
@@ -372,35 +385,24 @@ int main(int argc, char **argv) {
         
         
         //house shape
-        DrawRectangle(ourShader, 0.0f, -0.4f,  1.2f,  0.8f, testRotation, true, orange[0], orange[1], orange[2]); 
-        DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, -2.356194f, bHideRainbowRoofColor, magenta[0], magenta[1], magenta[2]); 
+        DrawRectangle(ourShader, glm::vec2(0.0f, -0.4f),  glm::vec2(1.2f,  0.8f), glm::radians(testRotation), true, Palette::orange); 
+        DrawTriangle(ourShader, glm::vec2(0.0f, 0.0f),  glm::vec2(1.0f,  1.0f), glm::radians(-135.0f), bHideRainbowRoofColor, Palette::magenta); 
         //windows
-        DrawRectangle(ourShader, -0.25f, -0.2f, 0.3f, 0.2f, -testRotation, true, teal[0], teal[1], teal[2]);
-        DrawRectangle(ourShader, 0.25f, -0.2f, 0.3f, 0.2f, -testRotation, true, teal[0], teal[1], teal[2]);
+        DrawRectangle(ourShader, glm::vec2(-0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
+        DrawRectangle(ourShader, glm::vec2(0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
         // door
-        DrawRectangle(ourShader, 0.0f, -0.6f,  0.2f,  0.3f, testRotation, true, forestGreen[0], forestGreen[1], forestGreen[2]);
-        DrawRectangle(ourShader, 0.05f, -0.6f,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
+        DrawRectangle(ourShader, glm::vec2(0.0f, -0.6f),  glm::vec2(0.2f,  0.3f), glm::radians(testRotation), true, Palette::forestGreen);
+        DrawRectangle(ourShader, glm::vec2(0.05f, -0.6f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
         
         //eyes
         if (bShowEyballs == true)
         {
-            DrawRectangle(ourShader, -0.25f + currentEyeMovement, -0.2f,  0.09f,  0.09f, testRotation, true, white[0], white[1], white[2]);
-            DrawRectangle(ourShader, -0.25f + currentEyeMovement, -0.2f,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
-            DrawRectangle(ourShader, 0.25f, -0.2f + currentEyeMovement,  0.09f,  0.09f, testRotation, true, white[0], white[1], white[2]);
-            DrawRectangle(ourShader, 0.25f, -0.2f + currentEyeMovement,  0.05f,  0.05f, testRotation, true, black[0], black[1], black[2]);
+            DrawRectangle(ourShader, glm::vec2(-0.25f + currentEyeMovement, -0.2f),  glm::vec2(0.09f,  0.09f), glm::radians(testRotation), true, Palette::white);
+            DrawRectangle(ourShader, glm::vec2(-0.25f + currentEyeMovement, -0.2f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
+            DrawRectangle(ourShader, glm::vec2(0.25f, -0.2f + currentEyeMovement),  glm::vec2(0.09f,  0.09f), glm::radians(testRotation), true, Palette::white);
+            DrawRectangle(ourShader, glm::vec2(0.25f, -0.2f + currentEyeMovement),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
         }
         
-        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f,testRotation);    // rainbow triangle 
-        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, 0.0f, true, 0.2f, 0.0f, 0.3f);           // purple triangle
-        //DrawTriangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f,testRotation, true, teal[0], teal[1], teal[2]);   // sad triangle   
-        
-        //DrawRectangle(ourShader, 0.0f, 0.0f,  1.0f,  1.0f, testRotation); 
-        
-        //testRotation += 0.01f;
-        //if (testRotation >= 360.0f)
-        //{
-        //    testRotation = 0.0f;
-        //}
         
         glfwSwapBuffers(window);
         glfwPollEvents();    

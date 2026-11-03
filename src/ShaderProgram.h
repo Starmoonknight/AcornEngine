@@ -8,12 +8,12 @@
 #include <sstream>
 #include <iostream>
 
-class Shader
+class ShaderProgram
 {
 public:
     unsigned int ID = 0;
     
-    Shader(const char* vertexPath, const char* fragmentPath)
+    ShaderProgram(const char* vertexPath, const char* fragmentPath)
     { 
         std::string vertexCode;
         std::string fragmentCode;
