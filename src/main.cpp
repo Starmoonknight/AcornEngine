@@ -20,6 +20,7 @@ namespace
         std::cerr << "GLFW error (" << error << "): " << description << '\n';
     }
     
+    /*
     // gets GLFW errors, automatic      (not in use, just looking at setup)
     void APIENTRY OpenGLDebugCallback(
         GLenum source,
@@ -35,6 +36,7 @@ namespace
                   << "][ID " << id << "] "
                   << message << '\n';
     }
+    */
     
     // some common error types as text 
     const char* OpenGLErrorName(GLenum error)
@@ -69,6 +71,7 @@ namespace
         }
     }
     
+    
     void framebufferSizeCallback(GLFWwindow* window, int width, int height)
     {
         glViewport(0, 0, width, height); 
@@ -100,9 +103,11 @@ namespace
     
     GLFWwindow* CreateWindow()
     {
+        /*
         //       (not in use, just looking at setup)
         // setting up a callback on errors for OpenGL, before creating window/context: 
         //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+        */
         
         GLFWwindow *window = glfwCreateWindow(WindowWidth, WindowHeight, "Hello World", nullptr, nullptr);
         if (window == nullptr)
@@ -120,11 +125,13 @@ namespace
             return nullptr;
         }
         
+        /*
         //       (not in use, just looking at setup)
         // setting up a callback on errors for OpenGL, after the context is current and GLAD successfully loaded:
         //glEnable(GL_DEBUG_OUTPUT);
         //glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         //glDebugMessageCallback(OpenGLDebugCallback, nullptr);
+        */
         
         glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     
