@@ -25,12 +25,24 @@ add_requires("glad v0.1.36", {configs = {
     loader = true,
 }})
 
+-- External dependencies
+add_requires("glfw", "glm") 
+
 target("Acorn")
+    -- Build an executable
     set_kind("binary")
+    -- C++ source files to compile
     add_files("src/*.cpp")
+    -- Headers to show in Ride
+    add_headerfiles("src/*.h", {install = false})
+    add_headerfiles("inc/*.h", {install = false})
+    -- Additional header search directory
+    add_includedirs("inc")
+    -- External libraries used by Acorn
     add_packages("glfw")
     add_packages("glm")
     add_packages("glad") 
+    -- Other files to display in Rider
     add_extrafiles("shaders/**.vert", "shaders/**.frag")
     
  

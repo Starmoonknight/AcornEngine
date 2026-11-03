@@ -13,6 +13,7 @@ namespace
     constexpr int WindowWidth = 800;
     constexpr int WindowHeight = 600;
     
+    
     // gets GLFW errors, automatic
     void glfwErrorCallback(int error, const char* description)
     {

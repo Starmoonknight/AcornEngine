@@ -48,9 +48,11 @@ public:
             return;  // returns with a false valid bool after failing init 
         }
         
-        
         const char* vShaderCode = vertexCode.c_str();
         const char* fShaderCode = fragmentCode.c_str();
+        
+        
+        
         
         unsigned int vertex, fragment;
         int success;
