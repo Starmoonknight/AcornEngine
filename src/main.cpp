@@ -18,29 +18,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 
-namespace Palette
-{
-    // Colours
-    const glm::vec3 red         {1.0f,  0.0f,  0.0f};
-    const glm::vec3 magenta     {1.0f,  0.0f,  1.0f};
-    const glm::vec3 pink        {1.0f,  0.75f, 0.8f};
-    const glm::vec3 orange      {1.0f,  0.5f,  0.0f};
-
-    const glm::vec3 blue        {0.0f,  0.0f,  1.0f};
-    const glm::vec3 navy        {0.0f,  0.0f,  0.5f};
-    const glm::vec3 cyan        {0.0f,  1.0f,  1.0f};
-    const glm::vec3 teal        {0.0f,  0.5f,  0.5f};
-    const glm::vec3 purple      {0.5f,  0.0f,  0.5f};
-
-    const glm::vec3 green       {0.0f,  1.0f,  0.0f};
-    const glm::vec3 forestGreen {0.13f, 0.55f, 0.13f};
-
-    const glm::vec3 black       {0.0f,  0.0f,  0.0f};
-    const glm::vec3 white       {1.0f,  1.0f,  1.0f};
-}
-
-
-
 namespace
 {
     constexpr int WindowWidth = 800;
@@ -172,22 +149,104 @@ namespace
     }
     
     
-    void processInput(GLFWwindow* window)
+    void processInput_ESCAPE(GLFWwindow* window)
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
     }
+    
+    struct GeometryRenderSettings
+    {
+        bool bPreviousTABPress = false;
+        bool bwireframe = false;
+        
+        bool bPreviousCAPSPress = false;
+        bool bCullFace = true;
+    }; 
+    
+    void processInput_RenderSettings(GLFWwindow* window, GeometryRenderSettings& settings)
+    {
+        bool currentTAB = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
+        if (currentTAB && !settings.bPreviousTABPress)
+        {
+            settings.bwireframe = !settings.bwireframe;
+            settings.bwireframe == true ? glPolygonMode(GL_FRONT_AND_BACK, GL_LINE) : glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
+        }
+        settings.bPreviousTABPress = currentTAB;
+        
+        bool currentCAPS = glfwGetKey(window, GLFW_KEY_CAPS_LOCK) == GLFW_PRESS;
+        if (currentCAPS && !settings.bPreviousCAPSPress)
+        {
+            settings.bCullFace = (glIsEnabled(GL_CULL_FACE) == GL_TRUE);        // to make sure it is not getting out of sync with the bool meaning 
+            settings.bCullFace = !settings.bCullFace;
+            
+            settings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+        }
+        settings.bPreviousCAPSPress = currentCAPS;
+    }
+    
+    
 }
 
 
 
 
 
+namespace Palette
+{
+    // Colours
+    const glm::vec3 red         {1.0f,  0.0f,  0.0f};
+    const glm::vec3 magenta     {1.0f,  0.0f,  1.0f};
+    const glm::vec3 pink        {1.0f,  0.75f, 0.8f};
+    const glm::vec3 orange      {1.0f,  0.5f,  0.0f};
+
+    const glm::vec3 blue        {0.0f,  0.0f,  1.0f};
+    const glm::vec3 navy        {0.0f,  0.0f,  0.5f};
+    const glm::vec3 cyan        {0.0f,  1.0f,  1.0f};
+    const glm::vec3 teal        {0.0f,  0.5f,  0.5f};
+    const glm::vec3 purple      {0.5f,  0.0f,  0.5f};
+
+    const glm::vec3 green       {0.0f,  1.0f,  0.0f};
+    const glm::vec3 forestGreen {0.13f, 0.55f, 0.13f};
+
+    const glm::vec3 black       {0.0f,  0.0f,  0.0f};
+    const glm::vec3 white       {1.0f,  1.0f,  1.0f};
+}
+
+
+
 namespace week1
 {
-
+    void CreateTriangleGeometry(unsigned int& VBO, unsigned int& VAO)
+    {
+        float vertices[] = {
+            // positions         // colors
+            0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
+           -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
+           -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
+       };  
+        
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glBindVertexArray(VAO);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        CheckOpenGLErrors("triangle geometry buffer setup");
+        // position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        // color attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+        glEnableVertexAttribArray(1);
+        CheckOpenGLErrors("triangle geometry attribute setup");
+    }
+    
+    
     void DrawTriangle(const ShaderProgram& shader, 
         glm::vec2 position, glm::vec2 scale, float rotationRad, 
         bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
@@ -224,33 +283,7 @@ namespace week1
         DrawTriangle(shader, position, scale, rotationRad, colorOverride, color);
         DrawTriangle(shader, position, -scale, rotationRad, colorOverride, color);
     }
-
         
-    void CreateTriangleGeometry(unsigned int& VBO, unsigned int& VAO)
-    {
-        float vertices[] = {
-            // positions         // colors
-            0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
-           -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
-           -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
-       };  
-        
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glBindVertexArray(VAO);
-        
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        CheckOpenGLErrors("triangle geometry buffer setup");
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        // color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-        glEnableVertexAttribArray(1);
-        CheckOpenGLErrors("triangle geometry attribute setup");
-    }
-
     void DrawHouse2D(const ShaderProgram& shader,  float testRotation, bool bHideRainbowRoofColor)
     {
         //house shape
@@ -286,7 +319,7 @@ namespace week1
         bool bGoingRight = true;
     };
 
-    void DrawCrazyHouse2D(GLFWwindow* window, ShaderProgram& houseShader, HouseRuntimeInfo& house)
+    void DrawCrazyHouse2D(GLFWwindow* window, const ShaderProgram& houseShader, HouseRuntimeInfo& house)
     {
         // key presses
         bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
@@ -370,6 +403,94 @@ namespace week1
 
 namespace week2
 {
+    void SetupGometryToRender(unsigned int& VBO, unsigned int& VAO, unsigned int& EBO, 
+        const float* vertices, GLsizeiptr verticesSizeBytes, const unsigned int* indices, GLsizeiptr indicesSizeBytes)
+    {
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+        glBindVertexArray(VAO);      // selecting VAO yo bind things to 
+    
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, verticesSizeBytes, vertices, GL_STATIC_DRAW);
+        CheckOpenGLErrors("geometry buffer setup");
+    
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSizeBytes, indices, GL_STATIC_DRAW);
+        CheckOpenGLErrors("EBO buffer setup");
+    
+        // position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        // color attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+        glEnableVertexAttribArray(1);
+        CheckOpenGLErrors("geometry attribute setup");
+    }
+    
+    struct PyramidRuntimeValues
+    {    
+        bool bPreviousQPress = false;
+        bool bPreviousWPress = false;
+        bool bPreviousEPress = false;
+    
+        bool bRotateX = false;
+        bool bRotateY = false;
+        bool bRotateZ = false;
+    
+        float rotationDegreesX = 0.0f;
+        float rotationDegreesY = 0.0f;
+        float rotationDegreesZ = 0.0f;
+    };
+    
+    void HandleRuntimeInputs(GLFWwindow* window, PyramidRuntimeValues& runtimeValues, float deltaTime)
+    {
+        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
+        bool currentW = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+        bool currentE = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
+        
+        if (currentQ && !runtimeValues.bPreviousQPress)
+        {
+            runtimeValues.bRotateX = !runtimeValues.bRotateX;
+        }
+        runtimeValues.bPreviousQPress = currentQ;
+        
+        if (currentW && !runtimeValues.bPreviousWPress)
+        {
+            runtimeValues.bRotateY = !runtimeValues.bRotateY;
+        }
+        runtimeValues.bPreviousWPress = currentW;
+        
+        if (currentE && !runtimeValues.bPreviousEPress)
+        {
+            runtimeValues.bRotateZ = !runtimeValues.bRotateZ;
+        }
+        runtimeValues.bPreviousEPress = currentE;
+        
+        
+        constexpr float DegreesPerSecond = 90.0f;
+        if (runtimeValues.bRotateX)
+        {
+            runtimeValues.rotationDegreesX = std::fmod(
+                runtimeValues.rotationDegreesX + DegreesPerSecond * deltaTime,
+                360.0f
+            );
+        }
+        if (runtimeValues.bRotateY)
+        {
+            runtimeValues.rotationDegreesY = std::fmod(
+                runtimeValues.rotationDegreesY + DegreesPerSecond * deltaTime,
+                360.0f
+            );
+        }
+        if (runtimeValues.bRotateZ)
+        {
+            runtimeValues.rotationDegreesZ = std::fmod(
+                runtimeValues.rotationDegreesZ + DegreesPerSecond * deltaTime,
+                360.0f
+            );
+        }        
+    }
     
     void RenderPyramid(const ShaderProgram& shader, 
     glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees, 
@@ -441,15 +562,16 @@ int main(int argc, char **argv) {
     
     
     
-    float vertices[] = {
+    float pyramidVertices[] = {
         // positions            // colors
-        0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, back right 
-       -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, back left 
-       -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, forward left 
-        0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, forward right
-        0.0f, 0.5f, 0.0f,       Palette::blue.r, Palette::blue.g, Palette::blue.b           // 4, up
+        0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
+       -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
+       -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
+        0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
+        0.0f, 0.5f, 0.0f,       Palette::blue.r, Palette::blue.g, Palette::blue.b           // 4, up, middle
    };  
     unsigned int pyramidIndices[] = {
+        // Pyramid: 18 indices
         2, 1, 0,    // bottom, half1
         0, 3, 2,    // bottom, half2
         0, 4, 3,    // right side face
@@ -465,12 +587,12 @@ int main(int argc, char **argv) {
     glBindVertexArray(pyramidVAO);      // selecting VAO yo bind things to 
     
     glBindBuffer(GL_ARRAY_BUFFER, pyramidVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    CheckOpenGLErrors("pyramid geometry buffer setup");
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidVertices), pyramidVertices, GL_STATIC_DRAW);
+    CheckOpenGLErrors("geometry buffer setup");
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pyramidEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(pyramidIndices), pyramidIndices, GL_STATIC_DRAW);
-    CheckOpenGLErrors("pyramid EBO buffer setup");
+    CheckOpenGLErrors("EBO buffer setup");
     
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -478,40 +600,59 @@ int main(int argc, char **argv) {
     // color attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
     glEnableVertexAttribArray(1);
-    CheckOpenGLErrors("pyramid geometry attribute setup");
+    CheckOpenGLErrors("geometry attribute setup");
     
     
     
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
+    float cubeVertices[] = {
+        // positions            // colors
+        0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
+       -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
+       -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
+        0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
+        
+        0.5f, 0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,     // 4, up, back right 
+       -0.5f, 0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,        // 5, up, back left 
+       -0.5f, 0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,           // 6, up, forward left 
+        0.5f, 0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,              // 7, up, forward right
+    }; 
+    
+    unsigned int cubeIndices[] = {
+        // Cube: 36 indices
+        2, 1, 0,    // bottom face, half1
+        0, 3, 2,    // bottom face, half2
+        7, 3, 0,    // right side face, half1
+        0, 4, 7,    // right side face, half2
+        6, 2, 3,    // front right side, half1
+        3, 7, 6,    // front right side, half1
+        5, 1, 2,    // left side face, half1
+        2, 6, 5,    // left side face, half2
+        5, 4, 0,    // back side face, half1
+        0, 1, 5,    // back side face, half2
+        6, 7, 4,    // top side face, half1
+        4, 5, 6,    // top side face, half2
+    };
+    
+    
     
     // face culling
-    //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_BACK);
+    GeometryRenderSettings renderSettings = {};
+    
+    glEnable(GL_CULL_FACE);
+    renderSettings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
     
     
     // runtime values
-    bool bPreviousQPress = false;
-    bool bPreviousWPress = false;
-    bool bPreviousEPress = false;
-    
-    bool bRotateX = false;
-    bool bRotateY = false;
-    bool bRotateZ = false;
-    
-    float rotationDegreesX = 0.0f;
-    float rotationDegreesY = 0.0f;
-    float rotationDegreesZ = 0.0f;
-    
     double previousTime = glfwGetTime();
     
     week1::HouseRuntimeInfo houseRuntimeInfo = {};
+    week2::PyramidRuntimeValues pyramidRuntimeInfo = {};
     
     
     // render loop
     while(!glfwWindowShouldClose(window))
     {
-        processInput(window);
+        processInput_ESCAPE(window);
         
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -519,53 +660,9 @@ int main(int argc, char **argv) {
         double currentTime = glfwGetTime();
         float deltaTime = static_cast<float>(currentTime - previousTime);
         previousTime = currentTime;
-        
-        
-        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
-        bool currentW = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
-        bool currentE = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
-        
-        if (currentQ && !bPreviousQPress)
-        {
-            bRotateX = !bRotateX;
-        }
-        bPreviousQPress = currentQ;
-        
-        if (currentW && !bPreviousWPress)
-        {
-            bRotateY = !bRotateY;
-        }
-        bPreviousWPress = currentW;
-        
-        if (currentE && !bPreviousEPress)
-        {
-            bRotateZ = !bRotateZ;
-        }
-        bPreviousEPress = currentE;
-        
-        
-        constexpr float DegreesPerSecond = 90.0f;
-        if (bRotateX)
-        {
-            rotationDegreesX = std::fmod(
-                rotationDegreesX + DegreesPerSecond * deltaTime,
-                360.0f
-            );
-        }
-        if (bRotateY)
-        {
-            rotationDegreesY = std::fmod(
-                rotationDegreesY + DegreesPerSecond * deltaTime,
-                360.0f
-            );
-        }
-        if (bRotateZ)
-        {
-            rotationDegreesZ = std::fmod(
-                rotationDegreesZ + DegreesPerSecond * deltaTime,
-                360.0f
-            );
-        }
+                
+        processInput_RenderSettings(window, renderSettings);
+        week2::HandleRuntimeInputs(window, pyramidRuntimeInfo, deltaTime);
         
         
         // activate program
@@ -579,7 +676,9 @@ int main(int argc, char **argv) {
         // Pyramid test
         glBindVertexArray(pyramidVAO);
         CheckOpenGLErrors("frame clear, shader activation and VAO binding");
-        week2::RenderPyramid(ourShader, glm::vec3(0), glm::vec3(1.0), glm::vec3(rotationDegreesX, rotationDegreesY, rotationDegreesZ));
+        week2::RenderPyramid(
+            ourShader, glm::vec3(0), glm::vec3(1.0), 
+            glm::vec3(pyramidRuntimeInfo.rotationDegreesX, pyramidRuntimeInfo.rotationDegreesY, pyramidRuntimeInfo.rotationDegreesZ));
         
         
         glfwSwapBuffers(window);
