@@ -4,6 +4,7 @@
 // Standard Library
 #include <cassert>
 #include <cmath>
+#include <vector>
 #include <cstddef>
 #include <iostream>
 
@@ -218,6 +219,7 @@ namespace Palette
     const glm::vec3 magenta     {1.0f,  0.0f,  1.0f};
     const glm::vec3 pink        {1.0f,  0.75f, 0.8f};
     const glm::vec3 orange      {1.0f,  0.5f,  0.0f};
+    const glm::vec3 yellow      {1.0f,  1.0f,  0.0f};
 
     const glm::vec3 blue        {0.0f,  0.0f,  1.0f};
     const glm::vec3 navy        {0.0f,  0.0f,  0.5f};
@@ -542,6 +544,97 @@ namespace week2
            20, 21, 22,  22, 23, 20
         };
     };
+        
+    
+        // It's not the nicest sphere, nor the nicest code, but it sort of works.
+    void generateSortofSphere(std::vector<float> &vertices, std::vector<unsigned int> &indices, int rings, int slices) {
+
+        if (rings < 3)  { std::cout << "no sphere generated. rings value < 3"  << std::endl;  return; }
+        if (slices < 4) { std::cout << "no sphere generated. slices value < 4" << std::endl;  return; }
+        
+        float PIE = 3.1415f;
+        
+        vertices.clear();
+        indices.clear();
+
+        float angle_step    = 360.0f / slices; 
+        float current_angle = 0.0f;
+        
+        // Vertices
+        float y_step = 2.0f / (rings - 1);
+        float y_pos  = 1.0f;
+
+        for (int ring = 0; ring < rings; ring++) {
+
+            int iteration_slices = slices;
+            if (ring == 0 || ring == rings - 1) { iteration_slices = 1; }
+
+            for (int i = 0; i < iteration_slices; i++) {
+
+                float radius = sinf(acos(y_pos));
+
+                float x_pos = cosf(current_angle * PIE / 180) * radius;
+                float z_pos = sinf(current_angle * PIE / 180) * radius;
+
+                vertices.push_back(x_pos);
+                vertices.push_back(y_pos);
+                vertices.push_back(z_pos);
+
+                current_angle += angle_step;
+            }
+
+            y_pos -= y_step;
+            current_angle = 0.0f;
+        }
+
+        std::cout << "Sphere vertex count:" << vertices.size() / 3 << std::endl;
+
+        //Indices
+        unsigned int top_most_index = 0;
+        unsigned int bottom_most_index = vertices.size() / 3 - 1;
+
+        for (int i = 0; i < rings - 1; i++) {
+
+            for (int j = 0; j < slices; j++) {
+
+                unsigned int tl_index = (i - 1) * slices + j + 1;
+                unsigned int tr_index = (i - 1) * slices + j + 1 + 1;
+                unsigned int bl_index = (i + 0) * slices + j + 1;
+                unsigned int br_index = (i + 0) * slices + j + 1 + 1;
+
+                if (j == slices - 1) { // For the seam
+                    tr_index = (i - 2) * slices + j + 1 + 1;
+                    br_index = (i - 1) * slices + j + 1 + 1;
+                }
+
+                if (i == 0) { // First ring
+
+                    indices.push_back(top_most_index);
+                    indices.push_back(br_index);
+                    indices.push_back(bl_index);
+
+                } else if (i == rings - 2) { // Last ring
+
+                    indices.push_back(tr_index);
+                    indices.push_back(bottom_most_index);
+                    indices.push_back(tl_index);
+
+                } else {
+
+                    indices.push_back(tl_index);
+                    indices.push_back(br_index);
+                    indices.push_back(bl_index);
+
+                    indices.push_back(tl_index);
+                    indices.push_back(tr_index);
+                    indices.push_back(br_index);
+                }
+            }
+        }
+
+        std::cout << "Sphere triangle count:" << indices.size() / 3 << std::endl;
+    }
+    
     
     // expects 3 position attributes followed by 3 color attributes 
     void SetupGometryToRender(unsigned int& VAO, unsigned int& VBO, unsigned int& EBO, 
@@ -555,11 +648,11 @@ namespace week2
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, verticesSizeBytes, vertices, GL_STATIC_DRAW);
         CheckOpenGLErrors("geometry buffer setup");
-    
+        
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSizeBytes, indices, GL_STATIC_DRAW);
         CheckOpenGLErrors("EBO buffer setup");
-    
+        
         // position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
@@ -954,28 +1047,29 @@ namespace week2
         glm::mat4 model, glm::mat4 view, glm::mat4 projection, 
         bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
     {
-        int bUseMatrices = glGetUniformLocation(shader.ID, "uUseMatrices");
+        int bUseMatricesLocation = glGetUniformLocation(shader.ID, "uUseMatrices");
         
-        int uModel = glGetUniformLocation(shader.ID, "uModel");
-        int uView = glGetUniformLocation(shader.ID, "uView");
-        int uProjection = glGetUniformLocation(shader.ID, "uProjection");
+        int modelLocation = glGetUniformLocation(shader.ID, "uModel");
+        int viewLocation = glGetUniformLocation(shader.ID, "uView");
+        int projectionLocation = glGetUniformLocation(shader.ID, "uProjection");
     
-        int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
+        int bOverrideColorLocation = glGetUniformLocation(shader.ID, "uColorOverride");
         int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
         
-        glUniform1i(bUseMatrices, true); 
+        glUniform1i(bUseMatricesLocation, GL_TRUE); 
         
         
         // updates uniforms on the currently active program using the saved uniform locations 
-        glUniformMatrix4fv(uModel, 1 ,GL_FALSE,  glm::value_ptr(model));
-        glUniformMatrix4fv(uView, 1 ,GL_FALSE,  glm::value_ptr(view));
-        glUniformMatrix4fv(uProjection, 1 ,GL_FALSE,  glm::value_ptr(projection));
+        glUniformMatrix4fv(modelLocation, 1 ,GL_FALSE,  glm::value_ptr(model));
+        glUniformMatrix4fv(viewLocation, 1 ,GL_FALSE,  glm::value_ptr(view));
+        glUniformMatrix4fv(projectionLocation, 1 ,GL_FALSE,  glm::value_ptr(projection));
         
         
-        glUniform1i(overrideLocation, colorOverride);
+        glUniform1i(bOverrideColorLocation, colorOverride);
         glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
         CheckOpenGLErrors("setting geometry Uniform's");                   
     }
+    
     
     void RenderPyramid()
     {        
@@ -989,8 +1083,91 @@ namespace week2
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
         CheckOpenGLErrors("drawing cube");
+    }    
+    
+    void RenderSphere(GLsizei indexCount) 
+    {        
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+        CheckOpenGLErrors("drawing sphere");
     }
     
+    
+    void RenderPyramid_FullFaceColors(const ShaderProgram& shader)
+    {
+        int bOverrideColorLocation = glGetUniformLocation(shader.ID, "uColorOverride");
+        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
+        
+        glUniform1i(bOverrideColorLocation, GL_TRUE);
+        
+        // has to match EBO draw order
+        glm::vec3 faceColors[5] = {
+            Palette::pink,    // Bottom
+            Palette::yellow,  // Right
+            Palette::red,     // Front
+            Palette::green,   // Left
+            Palette::blue,    // Back
+        };
+        
+        std::size_t offsetBytes = 0;
+        
+        // draw one face each loop
+        for (int face = 0; face < 5; ++face)
+        {
+            GLsizei indexCount;
+            
+            if (face == 0)
+            {
+                indexCount = 6; // Square bottom: two triangles.
+            }
+            else
+            {
+                indexCount = 3; // Each side: one triangle.
+            }
+
+            glUniform3fv(colorLocation, 1, glm::value_ptr(faceColors[face]));
+            
+            glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, reinterpret_cast<const void*>(offsetBytes));
+            
+            offsetBytes += static_cast<std::size_t>(indexCount) * sizeof(unsigned int);
+        }
+        
+        glUniform1i(bOverrideColorLocation, GL_FALSE);
+        glBindVertexArray(0);
+        CheckOpenGLErrors("drawing pyramid with different face colors");
+    }
+    
+    void RenderCube_FullFaceColors(const ShaderProgram& shader)
+    {
+        int bOverrideColorLocation = glGetUniformLocation(shader.ID, "uColorOverride");
+        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
+        
+        glUniform1i(bOverrideColorLocation, GL_TRUE);
+        
+        // has to match EBO draw order
+        glm::vec3 faceColors[6] = {
+            Palette::red,     // Bottom
+            Palette::orange,  // Right
+            Palette::pink,    // Front
+            Palette::green,   // Left
+            Palette::blue,    // Back
+            Palette::yellow  // Top
+        };
+        
+        // draw six vertex points at a time in one color, making a single face each loop 
+        for (int face = 0; face < 6; ++face)
+        {
+            glUniform3fv(colorLocation, 1, glm::value_ptr(faceColors[face]));
+            
+            std::size_t offsetBytes = face * 6 * sizeof(unsigned int);
+            
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, reinterpret_cast<const void*>(offsetBytes));
+        }
+        
+        glUniform1i(bOverrideColorLocation, GL_FALSE);
+        glBindVertexArray(0);
+        CheckOpenGLErrors("drawing cube with different face colors");
+    }
     
 }
 
@@ -1031,7 +1208,6 @@ int main(int argc, char **argv) {
         glfwTerminate();
         return -1;
     }
-    
     CheckOpenGLErrors("shader setup");
     
     
@@ -1047,24 +1223,55 @@ int main(int argc, char **argv) {
     week2::SetupGometryToRender(pyramidVAO, pyramidVBO, pyramidEBO, 
         pyramid.pyramidVertices, sizeof(pyramid.pyramidVertices), pyramid.pyramidIndices, sizeof(pyramid.pyramidIndices));
     
-    // create cube 1  
+    
+    // create cube version 1  
     week2::Cube1 cube1 = {};
     unsigned int cubeVAO,  cubeVBO, cubeEBO;
     week2::SetupGometryToRender(cubeVAO, cubeVBO, cubeEBO,
         cube1.cubeVertices, sizeof(cube1.cubeVertices), cube1.cubeIndices, sizeof(cube1.cubeIndices));
     
-    // create cube 2 
+    // create cube version 2 
     week2::Cube2 cube2 = {};
     unsigned int cube2VAO,  cube2VBO, cube2EBO;
     week2::SetupGometryToRender(cube2VAO, cube2VBO, cube2EBO,
         cube2.cube2Vertices, sizeof(cube2.cube2Vertices), cube2.cube2Indices, sizeof(cube2.cube2Indices));
     
     
+    // create sphere
+    std::vector<float> spherePositions; 
+    std::vector<unsigned int> sphereIndices; 
+    week2::generateSortofSphere(spherePositions, sphereIndices, 8, 16); 
+    // convert the sphere vectors to the XYZ + RGB layout my other functions use 
+    std::vector<float> sphereVertices;
+    glm::vec3 sphereColor(1.0f, 0.5f, 0.0f); // Orange
+    for (std::size_t i = 0; i < spherePositions.size(); i += 3)
+    {
+        // Position
+        sphereVertices.push_back(spherePositions[i]);
+        sphereVertices.push_back(spherePositions[i + 1]);
+        sphereVertices.push_back(spherePositions[i + 2]);
+
+        // Color
+        sphereVertices.push_back(sphereColor.r);
+        sphereVertices.push_back(sphereColor.g);
+        sphereVertices.push_back(sphereColor.b);
+    }
+    
+    unsigned int sphereVAO, sphereVBO, sphereEBO;
+    week2::SetupGometryToRender(sphereVAO, sphereVBO, sphereEBO,  
+        sphereVertices.data(), static_cast<GLsizeiptr>(sphereVertices.size() * sizeof(float)),
+        sphereIndices.data(), static_cast<GLsizeiptr>(sphereIndices.size() * sizeof(unsigned int))
+    ); 
+    
+    GLsizei sphereIndexCount = static_cast<GLsizei>(sphereIndices.size());
+    
+    
+    
     
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
     
-    glm::vec3 cameraPosition = glm::vec3(3.0f, 5.0f, 5.0f);
+    glm::vec3 cameraPosition = glm::vec3(4.0f, 5.0f, 7.0f);
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
     
@@ -1080,6 +1287,7 @@ int main(int argc, char **argv) {
     // enable depth 
     glEnable(GL_DEPTH_TEST);
     
+    
     // runtime values
     double previousTime = glfwGetTime();
     
@@ -1088,14 +1296,11 @@ int main(int argc, char **argv) {
     
     // controlled by keyboard toggles.
     week2::GeometryRuntimeValues_Transforms runtimeInfo = {};
-    
     // Automatic animations.
     week2::GeometryRuntimeValues_Transforms cubeAuto;
     cubeAuto.bRotateY = true;
-    
     week2::GeometryRuntimeValues_Transforms sphereAuto;
-    sphereAuto.bTranslateX = true;
-
+    sphereAuto.bTranslateZ = true;
     week2::GeometryRuntimeValues_Transforms pyramidAuto;
     pyramidAuto.bScaleY = true;
     
@@ -1163,9 +1368,10 @@ int main(int argc, char **argv) {
         glm::vec3 rotationDegrees = runtimeInfo.rotationDegrees;
         glm::vec3 movement = runtimeInfo.translation;
         
+        
         // Pyramid: placed on the left.
         glm::mat4 pyramidModel_1 = week2::BuildModelMatrix(
-            glm::vec3(-2.5f, 0.0f, 1.5f),
+            glm::vec3(-4.0f, 0.0f, 1.0f),
             glm::vec3(1.0f) * pyramidAuto.scale,
             glm::vec3(0.0f)
         );
@@ -1174,18 +1380,30 @@ int main(int argc, char **argv) {
         week2::RenderPyramid(); 
         
         glm::mat4 pyramidModel_2 = week2::BuildModelMatrix(
-            glm::vec3(-2.5f, 0.0f, -1.5f),
+            glm::vec3(-4.0f, 0.0f, -2.5f),
             glm::vec3(1.0f) * pyramidAuto.scale,
             glm::vec3(180.0f, 0.0f, 0.0f)
         );
         glBindVertexArray(pyramidVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_2, view, projection);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_2, view, projection, true, Palette::blue);
         week2::RenderPyramid(); 
         
         
-        // Cube 1: placed in the middle.
+        // manually controlled pyramid
+        glm::mat4 pyramidModel_Manual = week2::BuildModelMatrix(
+            glm::vec3(0.0f, 0.0f, 4.0f) + movement,
+            glm::vec3(1.0f) * scale,
+            glm::vec3(0.0f, 0.0f, 0.0f) + rotationDegrees
+        );
+        glBindVertexArray(pyramidVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_Manual, view, projection);
+        //week2::RenderPyramid(); 
+        week2::RenderPyramid_FullFaceColors(ourShader); 
+        
+        
+        // Cube version 1: placed in the middle.
         glm::mat4 cubeModel_1 = week2::BuildModelMatrix(
-        glm::vec3(0.0f, 0.0f, 1.5f),
+        glm::vec3(0.0f, 0.0f, 1.0f),
         glm::vec3(1.0f),
         glm::vec3(0.0f) + cubeAuto.rotationDegrees);
         glBindVertexArray(cubeVAO);
@@ -1193,27 +1411,54 @@ int main(int argc, char **argv) {
         week2::RenderCube(); 
         
         glm::mat4 cubeModel_2 = week2::BuildModelMatrix(
-            glm::vec3(0.0f, 0.0f, -1.5f),
+            glm::vec3(0.0f, 0.0f, -2.5f),
             glm::vec3(1.0f),
             glm::vec3(0.0f) - cubeAuto.rotationDegrees);
         glBindVertexArray(cubeVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, cubeModel_2, view, projection, true, Palette::orange);
-        week2::RenderCube(); 
+        week2::UpdateShaderUniforms_MATRIX(ourShader, cubeModel_2, view, projection, true, Palette::pink);
+        //week2::RenderCube(); 
+        week2::RenderCube_FullFaceColors(ourShader); 
         
-        
-        // Cube 2: placed on the right.
+        // Cube version 2: placed behind the other cubes.
         glm::mat4 cube2Model = week2::BuildModelMatrix(
-            glm::vec3(2.5f, 0.0f, 0.0f) + movement,
+            glm::vec3(0.0f, 0.0f, -7.0f),
             glm::vec3(1.0f),
-            glm::vec3(0.0f)
+            glm::vec3(0.0f) + cubeAuto.rotationDegrees
         );
         glBindVertexArray(cube2VAO);
-        //week2::UpdateShaderUniforms_MATRIX(ourShader, cube2Model, view, projection);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, cube2Model, view, projection);
+        week2::RenderCube(); 
+        
+        /*        
+        glBindVertexArray(cube2VAO);
         week2::UpdateShaderUniforms_OLD(ourShader, 
             glm::vec3(0.7f, 0.0f, 0.0f), // Position within the visible range
             glm::vec3(0.3f),                // Smaller cube
             glm::vec3(0.0f));
         week2::RenderCube(); 
+        */
+        
+        
+        // Sphere: placed on the right.
+        glm::mat4 sphereModel_1 = week2::BuildModelMatrix(
+            glm::vec3(3.0f, 0.0f, -1.0f) + sphereAuto.translation,
+            glm::vec3(0.5f),
+            glm::vec3(0.0f)
+        );
+        glBindVertexArray(sphereVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, sphereModel_1, view, projection);
+        week2::RenderSphere(sphereIndexCount);
+        
+        glm::mat4 sphereModel_2 = week2::BuildModelMatrix(
+            glm::vec3(4.5f, 0.0f, -2.5f) - sphereAuto.translation,
+            glm::vec3(0.5f),
+            glm::vec3(0.0f)
+        );
+        glBindVertexArray(sphereVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, sphereModel_2, view, projection, true, Palette::forestGreen);
+        week2::RenderSphere(sphereIndexCount);
+        
+        
         
         glfwSwapBuffers(window);
     }
@@ -1228,6 +1473,17 @@ int main(int argc, char **argv) {
     glDeleteVertexArrays(1, &pyramidVAO);
     glDeleteBuffers(1, &pyramidVBO);
     glDeleteBuffers(1, &pyramidEBO);
+    
+    // Cube cleanup 
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteBuffers(1, &cubeVBO);
+    glDeleteBuffers(1, &cubeEBO);
+    
+    // Sphere cleanup
+    glDeleteVertexArrays(1, &sphereVAO);
+    glDeleteBuffers(1, &sphereVBO);
+    glDeleteBuffers(1, &sphereEBO);
+    
     glDeleteProgram(ourShader.ID);
     
     glfwDestroyWindow(window);
