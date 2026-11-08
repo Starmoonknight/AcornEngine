@@ -23,6 +23,9 @@ namespace
     constexpr int WindowWidth = 800;
     constexpr int WindowHeight = 600;
     
+    constexpr float nearPlane = 0.1f;
+    constexpr float farPlane = 100.0f;
+    
     
     // gets GLFW errors, automatic
     void glfwErrorCallback(int error, const char* description)
@@ -143,6 +146,7 @@ namespace
         //glDebugMessageCallback(OpenGLDebugCallback, nullptr);
         */
         
+        // will supply the correct framebuffer height automatically and width on window resize 
         glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     
         return window; 
@@ -159,34 +163,45 @@ namespace
     
     struct GeometryRenderSettings
     {
-        bool bPreviousTABPress = false;
+        bool bPreviousPress_TAB = false;
         bool bwireframe = false;
         
-        bool bPreviousCAPSPress = false;
+        bool bPreviousPress_CAPS = false;
         bool bCullFace = true;
+        
+        bool bPreviousPress_Enter = false;
+        bool bPerspectiveView = true; 
     }; 
     
     void processInput_RenderSettings(GLFWwindow* window, GeometryRenderSettings& settings)
     {
         bool currentTAB = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
-        if (currentTAB && !settings.bPreviousTABPress)
+        if (currentTAB && !settings.bPreviousPress_TAB)
         {
             settings.bwireframe = !settings.bwireframe;
             settings.bwireframe == true ? glPolygonMode(GL_FRONT_AND_BACK, GL_LINE) : glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
             //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
         }
-        settings.bPreviousTABPress = currentTAB;
+        settings.bPreviousPress_TAB = currentTAB;
         
         bool currentCAPS = glfwGetKey(window, GLFW_KEY_CAPS_LOCK) == GLFW_PRESS;
-        if (currentCAPS && !settings.bPreviousCAPSPress)
+        if (currentCAPS && !settings.bPreviousPress_CAPS)
         {
             settings.bCullFace = (glIsEnabled(GL_CULL_FACE) == GL_TRUE);        // to make sure it is not getting out of sync with the bool meaning 
             settings.bCullFace = !settings.bCullFace;
             
             settings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
         }
-        settings.bPreviousCAPSPress = currentCAPS;
+        settings.bPreviousPress_CAPS = currentCAPS;
+        
+        bool currentEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+        if (currentEnter && !settings.bPreviousPress_Enter)
+        {
+            settings.bPerspectiveView = !settings.bPerspectiveView;
+        }
+        settings.bPreviousPress_Enter = currentEnter;
+        
     }
     
     
@@ -403,13 +418,139 @@ namespace week1
 
 namespace week2
 {
-    void SetupGometryToRender(unsigned int& VBO, unsigned int& VAO, unsigned int& EBO, 
+    // maybe.... look into later what values to do save like this, for example color? 
+    /*
+    struct Vertex
+    {
+        float px, py, pz;
+        float nx, ny, nz;
+        float u, v; 
+    };
+    
+    struct MeshData
+    {
+        std::vector<Vertex> vertices;
+        std::vector<unsigned int> indices; 
+    };
+    */
+    
+    struct Pyramid
+    {
+        float pyramidVertices[5 * 6] = {
+            // positions            // colors
+            0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
+           -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
+           -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
+            0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
+            0.0f, 0.5f, 0.0f,       Palette::blue.r, Palette::blue.g, Palette::blue.b           // 4, up, middle
+       };  
+        unsigned int pyramidIndices[18] = {
+            // Pyramid: 18 indices
+            2, 1, 0,    // bottom, half1
+            0, 3, 2,    // bottom, half2
+            0, 4, 3,    // right side face
+            3, 4, 2,    // front right side
+            2, 4, 1,    // left side face
+            1, 4, 0,    // back side face
+        };
+    };
+    
+    struct Cube1
+    {
+        float cubeVertices[8 * 6] = {
+            // positions            // colors
+            0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
+           -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
+           -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
+            0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
+        
+            0.5f, 0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,     // 4, up, back right 
+           -0.5f, 0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,        // 5, up, back left 
+           -0.5f, 0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,           // 6, up, forward left 
+            0.5f, 0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,              // 7, up, forward right
+        }; 
+        unsigned int cubeIndices[36] = {
+            // Cube: 36 indices
+            2, 1, 0,    // bottom face, half1
+            0, 3, 2,    // bottom face, half2
+            7, 3, 0,    // right side face, half1
+            0, 4, 7,    // right side face, half2
+            6, 2, 3,    // front right side, half1
+            3, 7, 6,    // front right side, half1
+            5, 1, 2,    // left side face, half1
+            2, 6, 5,    // left side face, half2
+            5, 4, 0,    // back side face, half1
+            0, 1, 5,    // back side face, half2
+            6, 7, 4,    // top side face, half1
+            4, 5, 6,    // top side face, half2
+        };
+    };
+    
+    struct Cube2
+    {
+        float cube2Vertices[24 * 6] = {
+            // front face
+            -0.5f, -0.5f, 0.5f,     1.0f, 0.0f, 0.0f,
+             0.5f, -0.5f, 0.5f,     1.0f, 0.0f, 0.0f,
+             0.5f,  0.5f, 0.5f,     1.0f, 1.0f, 0.0f,
+            -0.5f,  0.5f, 0.5f,     1.0f, 1.0f, 0.0f,
+        
+            // Back face
+            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
+             0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+        
+            // Bottom face
+            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+             0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+             0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
+        
+            //Top face
+            -0.5f, 0.5f,  -0.5f,    1.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f,   0.5f,    1.0f, 1.0f, 0.0f,
+             0.5f, 0.5f,   0.5f,    1.0f, 1.0f, 0.0f,
+             0.5f, 0.5f,  -0.5f,    1.0f, 0.0f, 0.0f,
+        
+            // Left face
+            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
+        
+            // Right face
+            0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+            0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
+            0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
+            0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
+        };
+    
+        unsigned int cube2Indices[36] = {
+            // Cube: 36 indices
+            // Front face
+            0,  1,  2,   2,  3,  0,
+           // Back face
+            4,  5,  6,   6,  7,  4,
+           // Bottom face
+            8, 9,  10,  10,  11, 8,
+           // Top face
+           12, 13, 14,  14, 15, 12,
+           // Left face
+           16, 17, 18,  18, 19, 16,
+           // Right face
+           20, 21, 22,  22, 23, 20
+        };
+    };
+    
+    // expects 3 position attributes followed by 3 color attributes 
+    void SetupGometryToRender(unsigned int& VAO, unsigned int& VBO, unsigned int& EBO, 
         const float* vertices, GLsizeiptr verticesSizeBytes, const unsigned int* indices, GLsizeiptr indicesSizeBytes)
     {
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);
-        glBindVertexArray(VAO);      // selecting VAO yo bind things to 
+        glBindVertexArray(VAO);      // selecting VAO to bind things to 
     
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, verticesSizeBytes, vertices, GL_STATIC_DRAW);
@@ -426,82 +567,329 @@ namespace week2
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
         glEnableVertexAttribArray(1);
         CheckOpenGLErrors("geometry attribute setup");
+        
+        glBindVertexArray(0); 
     }
     
-    struct PyramidRuntimeValues
-    {    
-        bool bPreviousQPress = false;
-        bool bPreviousWPress = false;
-        bool bPreviousEPress = false;
+    struct GeometryRuntimeValues_Transforms
+    {   
+        bool bPreviousPress_Space = false;
+        
+        // Scale
+        bool bPreviousPress_Q = false;
+        bool bPreviousPress_W = false;
+        bool bPreviousPress_E = false;
+    
+        bool bScaleX = false;
+        bool bScaleY = false;
+        bool bScaleZ = false;
+        
+        glm::vec3 scale = glm::vec3(1.0f);
+        
+        bool bGrowingX = true;
+        bool bGrowingY = true;
+        bool bGrowingZ = true;
+        
+        // Rotation
+        bool bPreviousPress_A = false;
+        bool bPreviousPress_S = false;
+        bool bPreviousPress_D = false;
     
         bool bRotateX = false;
         bool bRotateY = false;
         bool bRotateZ = false;
     
-        float rotationDegreesX = 0.0f;
-        float rotationDegreesY = 0.0f;
-        float rotationDegreesZ = 0.0f;
+        glm::vec3 rotationDegrees = glm::vec3 (0.0f);
+        
+        // Location
+        bool bPreviousPress_Z = false;
+        bool bPreviousPress_X = false;
+        bool bPreviousPress_C = false;
+    
+        bool bTranslateX = false;
+        bool bTranslateY = false;
+        bool bTranslateZ = false;
+        
+        glm::vec3 translation = glm::vec3 (0.0f);
+        
+        bool bPositivMovementX = true; 
+        bool bPositivMovementY = true; 
+        bool bPositivMovementZ = true; 
     };
     
-    void HandleRuntimeInputs(GLFWwindow* window, PyramidRuntimeValues& runtimeValues, float deltaTime)
+    void HandleRuntimeInputs(GLFWwindow* window, GeometryRuntimeValues_Transforms& values)
     {
-        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
-        bool currentW = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
-        bool currentE = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
+        bool current_Space = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        bool bReset = false; 
         
-        if (currentQ && !runtimeValues.bPreviousQPress)
+        if (current_Space && !values.bPreviousPress_Space)
         {
-            runtimeValues.bRotateX = !runtimeValues.bRotateX;
+            bReset = !bReset;
         }
-        runtimeValues.bPreviousQPress = currentQ;
+        values.bPreviousPress_Space = current_Space;
         
-        if (currentW && !runtimeValues.bPreviousWPress)
+        
+        bool current_Q = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
+        bool current_W = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+        bool current_E = glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS;
+        
+        bool current_A = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+        bool current_S = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+        bool current_D = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+        
+        bool current_Z = glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS;
+        bool current_X = glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS;
+        bool current_C = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
+        
+        // scale key inputs
+        if (current_Q && !values.bPreviousPress_Q)
         {
-            runtimeValues.bRotateY = !runtimeValues.bRotateY;
+            values.bScaleX = !values.bScaleX;
         }
-        runtimeValues.bPreviousWPress = currentW;
+        values.bPreviousPress_Q = current_Q;
         
-        if (currentE && !runtimeValues.bPreviousEPress)
+        if (current_W && !values.bPreviousPress_W)
         {
-            runtimeValues.bRotateZ = !runtimeValues.bRotateZ;
+            values.bScaleY = !values.bScaleY;
         }
-        runtimeValues.bPreviousEPress = currentE;
+        values.bPreviousPress_W = current_W;
         
-        
-        constexpr float DegreesPerSecond = 90.0f;
-        if (runtimeValues.bRotateX)
+        if (current_E && !values.bPreviousPress_E)
         {
-            runtimeValues.rotationDegreesX = std::fmod(
-                runtimeValues.rotationDegreesX + DegreesPerSecond * deltaTime,
+            values.bScaleZ = !values.bScaleZ;
+        }
+        values.bPreviousPress_E = current_E;
+        
+        // rotation key inputs
+        if (current_A && !values.bPreviousPress_A)
+        {
+            values.bRotateX = !values.bRotateX;
+        }
+        values.bPreviousPress_A = current_A;
+        
+        if (current_S && !values.bPreviousPress_S)
+        {
+            values.bRotateY = !values.bRotateY;
+        }
+        values.bPreviousPress_S = current_S;
+        
+        if (current_D && !values.bPreviousPress_D)
+        {
+            values.bRotateZ = !values.bRotateZ;
+        }
+        values.bPreviousPress_D = current_D;
+        
+        // translate key inputs
+        if (current_Z && !values.bPreviousPress_Z)
+        {
+            values.bTranslateX = !values.bTranslateX;
+        }
+        values.bPreviousPress_Z = current_Z;
+        
+        if (current_X && !values.bPreviousPress_X)
+        {
+            values.bTranslateY = !values.bTranslateY;
+        }
+        values.bPreviousPress_X = current_X;
+        
+        if (current_C && !values.bPreviousPress_C)
+        {
+            values.bTranslateZ = !values.bTranslateZ;
+        }
+        values.bPreviousPress_C = current_C;        
+        
+        
+        // reset of scale and rotation 
+        if (bReset)
+        {
+            values.scale = glm::vec3(1.0f);           // (1, 1, 1)
+            values.rotationDegrees = glm::vec3(0.0f); // (0, 0, 0)
+            values.translation = glm::vec3(0.0f);     // (0, 0, 0)                        
+        }
+    }
+    
+    void UpdateTransforms(
+    GeometryRuntimeValues_Transforms& values,
+    float deltaTime)
+    {
+        constexpr float scaleChangePerSecond = 1.0f;
+        constexpr float maxScale = 1.5f;
+        constexpr float minScale = 0.25f;
+        
+        constexpr float rotationDegreesPerSecond = 90.0f;
+        
+        constexpr float translarationChangePerSecond = 1.0f;
+        constexpr float maxTranslate = 2.0f;
+        constexpr float minTranslate = -2.0f;
+        
+        // scale application
+        if (values.bScaleX)
+        {
+            if (values.bGrowingX)
+            {
+                values.scale.x = values.scale.x + scaleChangePerSecond * deltaTime;
+                if (values.scale.x > maxScale)
+                {
+                    values.scale.x = maxScale;
+                    values.bGrowingX = false; 
+                }
+            }
+            else
+            {
+                values.scale.x = values.scale.x - scaleChangePerSecond * deltaTime;
+                if (values.scale.x < minScale)
+                {
+                    values.scale.x = minScale;
+                    values.bGrowingX = true; 
+                }
+            }
+        }
+        if (values.bScaleY)
+        {
+            if (values.bGrowingY)
+            {
+                values.scale.y = values.scale.y + scaleChangePerSecond * deltaTime;
+                if (values.scale.y > maxScale)
+                {
+                    values.scale.y = maxScale;
+                    values.bGrowingY = false; 
+                }
+            }
+            else
+            {
+                values.scale.y = values.scale.y - scaleChangePerSecond * deltaTime;
+                if (values.scale.y < minScale)
+                {
+                    values.scale.y = minScale;
+                    values.bGrowingY = true; 
+                }
+            }
+        }
+        if (values.bScaleZ)
+        {
+            if (values.bGrowingZ)
+            {
+                values.scale.z = values.scale.z + scaleChangePerSecond * deltaTime;
+                if (values.scale.z > maxScale)
+                {
+                    values.scale.z = maxScale;
+                    values.bGrowingZ= false; 
+                }
+            }
+            else
+            {
+                values.scale.z = values.scale.z - scaleChangePerSecond * deltaTime;
+                if (values.scale.z < minScale)
+                {
+                    values.scale.z = minScale;
+                    values.bGrowingZ = true; 
+                }
+            }
+        }
+        
+        // rotation application
+        if (values.bRotateX)
+        {
+            values.rotationDegrees.x = std::fmod(
+                values.rotationDegrees.x + rotationDegreesPerSecond * deltaTime,
                 360.0f
             );
         }
-        if (runtimeValues.bRotateY)
+        if (values.bRotateY)
         {
-            runtimeValues.rotationDegreesY = std::fmod(
-                runtimeValues.rotationDegreesY + DegreesPerSecond * deltaTime,
+            values.rotationDegrees.y = std::fmod(
+                values.rotationDegrees.y + rotationDegreesPerSecond * deltaTime,
                 360.0f
             );
         }
-        if (runtimeValues.bRotateZ)
+        if (values.bRotateZ)
         {
-            runtimeValues.rotationDegreesZ = std::fmod(
-                runtimeValues.rotationDegreesZ + DegreesPerSecond * deltaTime,
+            values.rotationDegrees.z = std::fmod(
+                values.rotationDegrees.z + rotationDegreesPerSecond * deltaTime,
                 360.0f
             );
         }        
+        
+        // translation application
+        if (values.bTranslateX)
+        {
+            if (values.bPositivMovementX)
+            {
+                values.translation.x = values.translation.x + translarationChangePerSecond * deltaTime;
+                if (values.translation.x > maxTranslate)
+                {
+                    values.translation.x = maxTranslate;
+                    values.bPositivMovementX = false; 
+                }
+            }
+            else
+            {
+                values.translation.x = values.translation.x - translarationChangePerSecond * deltaTime;
+                if (values.translation.x < minTranslate)
+                {
+                    values.translation.x = minTranslate;
+                    values.bPositivMovementX = true; 
+                }
+            }
+        }
+        if (values.bTranslateY)
+        {
+            if (values.bPositivMovementY)
+            {
+                values.translation.y = values.translation.y + translarationChangePerSecond * deltaTime;
+                if (values.translation.y > maxTranslate)
+                {
+                    values.translation.y = maxTranslate;
+                    values.bPositivMovementY = false; 
+                }
+            }
+            else
+            {
+                values.translation.y = values.translation.y - translarationChangePerSecond * deltaTime;
+                if (values.translation.y < minTranslate)
+                {
+                    values.translation.y = minTranslate;
+                    values.bPositivMovementY = true; 
+                }
+            }
+        }
+        if (values.bTranslateZ)
+        {
+            if (values.bPositivMovementZ)
+            {
+                values.translation.z = values.translation.z + translarationChangePerSecond * deltaTime;
+                if (values.translation.z > maxTranslate)
+                {
+                    values.translation.z = maxTranslate;
+                    values.bPositivMovementZ = false; 
+                }
+            }
+            else
+            {
+                values.translation.z = values.translation.z - translarationChangePerSecond * deltaTime;
+                if (values.translation.z < minTranslate)
+                {
+                    values.translation.z = minTranslate;
+                    values.bPositivMovementZ = true; 
+                }
+            }
+        }
     }
     
-    void RenderPyramid(const ShaderProgram& shader, 
-    glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees, 
-    bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
+    void UpdateShaderUniforms_OLD(const ShaderProgram& shader, 
+        glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees, 
+        bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
     {
+        int bUseMatrices = glGetUniformLocation(shader.ID, "uUseMatrices");
+        
         int positionLocation = glGetUniformLocation(shader.ID, "uPosition");
         int scaleLocation = glGetUniformLocation(shader.ID, "uScale");
         int rotationLocation = glGetUniformLocation(shader.ID, "uRotation");
     
         int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
         int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
+        
+        glUniform1i(bUseMatrices, false); 
         
         glm::vec3 rotationRad = glm::radians(rotationDegrees);                     // convert from angles in degrees to radians
     
@@ -512,11 +900,95 @@ namespace week2
         
         glUniform1i(overrideLocation, colorOverride);
         glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
-        CheckOpenGLErrors("setting pyramid Uniform's");                        // Assumes the triangle's VAO is already bound.
+        CheckOpenGLErrors("setting geometry Uniform's");                   
+    }
+    
+    glm::mat4 BuildModelMatrix(glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees)
+    {
+        // A starting matrix that makes no change.
+        const glm::mat4 identity(1.0f);
         
+        // Describe the object's size.
+        glm::mat4 scaleMatrix = glm::scale(
+            identity, 
+            scale
+        );
+        
+        // Describe rotation around the Y axis.
+        glm::mat4 rotationMatrix_X = glm::rotate(
+            identity, 
+            glm::radians(rotationDegrees.x), 
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        );
+        
+        // Describe rotation around the Y axis.
+        glm::mat4 rotationMatrix_Y = glm::rotate(
+            identity, 
+            glm::radians(rotationDegrees.y), 
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+        
+        // Describe rotation around the Y axis.
+        glm::mat4 rotationMatrix_Z = glm::rotate(
+            identity, 
+            glm::radians(rotationDegrees.z), 
+            glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+        
+        // reads from right to left, rotation needs to be added X, then Y, then Z. 
+        glm::mat4 rotationMatrix = rotationMatrix_Z * rotationMatrix_Y * rotationMatrix_X; 
+        
+        // Describe the object's position.
+        glm::mat4 translationMatrix = glm::translate(
+            identity, 
+            position
+        );
+        
+        // reads from right to left, applying scale, then rotation, then position
+        glm::mat4 modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+        
+        return modelMatrix;
+    }
+    
+    void UpdateShaderUniforms_MATRIX(const ShaderProgram& shader, 
+        glm::mat4 model, glm::mat4 view, glm::mat4 projection, 
+        bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
+    {
+        int bUseMatrices = glGetUniformLocation(shader.ID, "uUseMatrices");
+        
+        int uModel = glGetUniformLocation(shader.ID, "uModel");
+        int uView = glGetUniformLocation(shader.ID, "uView");
+        int uProjection = glGetUniformLocation(shader.ID, "uProjection");
+    
+        int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
+        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
+        
+        glUniform1i(bUseMatrices, true); 
+        
+        
+        // updates uniforms on the currently active program using the saved uniform locations 
+        glUniformMatrix4fv(uModel, 1 ,GL_FALSE,  glm::value_ptr(model));
+        glUniformMatrix4fv(uView, 1 ,GL_FALSE,  glm::value_ptr(view));
+        glUniformMatrix4fv(uProjection, 1 ,GL_FALSE,  glm::value_ptr(projection));
+        
+        
+        glUniform1i(overrideLocation, colorOverride);
+        glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
+        CheckOpenGLErrors("setting geometry Uniform's");                   
+    }
+    
+    void RenderPyramid()
+    {        
         glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
         CheckOpenGLErrors("drawing pyramid");
+    }
+    
+    void RenderCube()
+    {        
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+        CheckOpenGLErrors("drawing cube");
     }
     
     
@@ -543,6 +1015,13 @@ int main(int argc, char **argv) {
         return -1;
     }
     
+    int frameBufferWidth;
+    int frameBufferHeight;
+    // set viewport once during setup, since registering the callback does not set it 
+    glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+    glViewport(0, 0, frameBufferWidth, frameBufferHeight);
+    
+    
     ShaderProgram ourShader("shaders/basic.vert", "shaders/basic.frag");
     if (!ourShader.IsValid())
     {
@@ -562,127 +1041,181 @@ int main(int argc, char **argv) {
     
     
     
-    float pyramidVertices[] = {
-        // positions            // colors
-        0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
-       -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
-       -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
-        0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
-        0.0f, 0.5f, 0.0f,       Palette::blue.r, Palette::blue.g, Palette::blue.b           // 4, up, middle
-   };  
-    unsigned int pyramidIndices[] = {
-        // Pyramid: 18 indices
-        2, 1, 0,    // bottom, half1
-        0, 3, 2,    // bottom, half2
-        0, 4, 3,    // right side face
-        3, 4, 2,    // front right side
-        2, 4, 1,    // left side face
-        1, 4, 0,    // back side face
-    };
+    // create pyramid 
+    week2::Pyramid pyramid = {};
+    unsigned int pyramidVAO, pyramidVBO, pyramidEBO;
+    week2::SetupGometryToRender(pyramidVAO, pyramidVBO, pyramidEBO, 
+        pyramid.pyramidVertices, sizeof(pyramid.pyramidVertices), pyramid.pyramidIndices, sizeof(pyramid.pyramidIndices));
     
-    unsigned int pyramidVBO, pyramidVAO, pyramidEBO;
-    glGenVertexArrays(1, &pyramidVAO);
-    glGenBuffers(1, &pyramidVBO);
-    glGenBuffers(1, &pyramidEBO);
-    glBindVertexArray(pyramidVAO);      // selecting VAO yo bind things to 
+    // create cube 1  
+    week2::Cube1 cube1 = {};
+    unsigned int cubeVAO,  cubeVBO, cubeEBO;
+    week2::SetupGometryToRender(cubeVAO, cubeVBO, cubeEBO,
+        cube1.cubeVertices, sizeof(cube1.cubeVertices), cube1.cubeIndices, sizeof(cube1.cubeIndices));
     
-    glBindBuffer(GL_ARRAY_BUFFER, pyramidVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidVertices), pyramidVertices, GL_STATIC_DRAW);
-    CheckOpenGLErrors("geometry buffer setup");
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pyramidEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(pyramidIndices), pyramidIndices, GL_STATIC_DRAW);
-    CheckOpenGLErrors("EBO buffer setup");
-    
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-    glEnableVertexAttribArray(1);
-    CheckOpenGLErrors("geometry attribute setup");
+    // create cube 2 
+    week2::Cube2 cube2 = {};
+    unsigned int cube2VAO,  cube2VBO, cube2EBO;
+    week2::SetupGometryToRender(cube2VAO, cube2VBO, cube2EBO,
+        cube2.cube2Vertices, sizeof(cube2.cube2Vertices), cube2.cube2Indices, sizeof(cube2.cube2Indices));
     
     
     
-    float cubeVertices[] = {
-        // positions            // colors
-        0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
-       -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
-       -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
-        0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
-        
-        0.5f, 0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,     // 4, up, back right 
-       -0.5f, 0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,        // 5, up, back left 
-       -0.5f, 0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,           // 6, up, forward left 
-        0.5f, 0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,              // 7, up, forward right
-    }; 
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 projection = glm::mat4(1.0f);
     
-    unsigned int cubeIndices[] = {
-        // Cube: 36 indices
-        2, 1, 0,    // bottom face, half1
-        0, 3, 2,    // bottom face, half2
-        7, 3, 0,    // right side face, half1
-        0, 4, 7,    // right side face, half2
-        6, 2, 3,    // front right side, half1
-        3, 7, 6,    // front right side, half1
-        5, 1, 2,    // left side face, half1
-        2, 6, 5,    // left side face, half2
-        5, 4, 0,    // back side face, half1
-        0, 1, 5,    // back side face, half2
-        6, 7, 4,    // top side face, half1
-        4, 5, 6,    // top side face, half2
-    };
+    glm::vec3 cameraPosition = glm::vec3(3.0f, 5.0f, 5.0f);
+    glm::vec3 cameraTarget = glm::vec3(0.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    
+    view = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
     
     
     
     // face culling
     GeometryRenderSettings renderSettings = {};
-    
     glEnable(GL_CULL_FACE);
     renderSettings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
     
+    // enable depth 
+    glEnable(GL_DEPTH_TEST);
     
     // runtime values
     double previousTime = glfwGetTime();
     
     week1::HouseRuntimeInfo houseRuntimeInfo = {};
-    week2::PyramidRuntimeValues pyramidRuntimeInfo = {};
+    renderSettings.bPerspectiveView = true; 
+    
+    // controlled by keyboard toggles.
+    week2::GeometryRuntimeValues_Transforms runtimeInfo = {};
+    
+    // Automatic animations.
+    week2::GeometryRuntimeValues_Transforms cubeAuto;
+    cubeAuto.bRotateY = true;
+    
+    week2::GeometryRuntimeValues_Transforms sphereAuto;
+    sphereAuto.bTranslateX = true;
+
+    week2::GeometryRuntimeValues_Transforms pyramidAuto;
+    pyramidAuto.bScaleY = true;
     
     
     // render loop
     while(!glfwWindowShouldClose(window))
     {
+        glfwPollEvents();
         processInput_ESCAPE(window);
         
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);   // window background color
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
+        // get time and deltaTime 
         double currentTime = glfwGetTime();
         float deltaTime = static_cast<float>(currentTime - previousTime);
         previousTime = currentTime;
-                
+        
+        // update runtime logic
         processInput_RenderSettings(window, renderSettings);
-        week2::HandleRuntimeInputs(window, pyramidRuntimeInfo, deltaTime);
+        
+        week2::HandleRuntimeInputs(window, runtimeInfo);
+
+        week2::UpdateTransforms(runtimeInfo, deltaTime);
+        week2::UpdateTransforms(cubeAuto, deltaTime);
+        week2::UpdateTransforms(sphereAuto, deltaTime);
+        week2::UpdateTransforms(pyramidAuto, deltaTime);
+        
+        
+        glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);  
+        // zero check skips drawing if there is no drawable area
+        if (frameBufferWidth == 0 || frameBufferHeight == 0)
+        {
+            continue;
+        }
+        
+        float aspectRatio = 
+            static_cast<float>(frameBufferWidth) / 
+            static_cast<float>(frameBufferHeight);
+        
+        
+        if (renderSettings.bPerspectiveView)
+        {
+            projection = glm::perspective(glm::radians(70.0f), aspectRatio, nearPlane, farPlane);
+        }
+        else
+        {
+            projection = glm::ortho(-5.0f * aspectRatio, 5.0f * aspectRatio, -5.0f, 5.0f, nearPlane, farPlane);
+        }
+        
         
         
         // activate program
         ourShader.use(); 
         
-        // triangle test
+        
+        // triangle test, week 1
         //glBindVertexArray(triangleVAO);
         //week1::DrawCrazyHouse2D(window, ourShader, houseRuntimeInfo); 
         //glBindVertexArray(0);
         
-        // Pyramid test
-        glBindVertexArray(pyramidVAO);
-        CheckOpenGLErrors("frame clear, shader activation and VAO binding");
-        week2::RenderPyramid(
-            ourShader, glm::vec3(0), glm::vec3(1.0), 
-            glm::vec3(pyramidRuntimeInfo.rotationDegreesX, pyramidRuntimeInfo.rotationDegreesY, pyramidRuntimeInfo.rotationDegreesZ));
         
+        
+        glm::vec3 scale = runtimeInfo.scale;
+        glm::vec3 rotationDegrees = runtimeInfo.rotationDegrees;
+        glm::vec3 movement = runtimeInfo.translation;
+        
+        // Pyramid: placed on the left.
+        glm::mat4 pyramidModel_1 = week2::BuildModelMatrix(
+            glm::vec3(-2.5f, 0.0f, 1.5f),
+            glm::vec3(1.0f) * pyramidAuto.scale,
+            glm::vec3(0.0f)
+        );
+        glBindVertexArray(pyramidVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_1, view, projection);
+        week2::RenderPyramid(); 
+        
+        glm::mat4 pyramidModel_2 = week2::BuildModelMatrix(
+            glm::vec3(-2.5f, 0.0f, -1.5f),
+            glm::vec3(1.0f) * pyramidAuto.scale,
+            glm::vec3(180.0f, 0.0f, 0.0f)
+        );
+        glBindVertexArray(pyramidVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_2, view, projection);
+        week2::RenderPyramid(); 
+        
+        
+        // Cube 1: placed in the middle.
+        glm::mat4 cubeModel_1 = week2::BuildModelMatrix(
+        glm::vec3(0.0f, 0.0f, 1.5f),
+        glm::vec3(1.0f),
+        glm::vec3(0.0f) + cubeAuto.rotationDegrees);
+        glBindVertexArray(cubeVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, cubeModel_1, view, projection);
+        week2::RenderCube(); 
+        
+        glm::mat4 cubeModel_2 = week2::BuildModelMatrix(
+            glm::vec3(0.0f, 0.0f, -1.5f),
+            glm::vec3(1.0f),
+            glm::vec3(0.0f) - cubeAuto.rotationDegrees);
+        glBindVertexArray(cubeVAO);
+        week2::UpdateShaderUniforms_MATRIX(ourShader, cubeModel_2, view, projection, true, Palette::orange);
+        week2::RenderCube(); 
+        
+        
+        // Cube 2: placed on the right.
+        glm::mat4 cube2Model = week2::BuildModelMatrix(
+            glm::vec3(2.5f, 0.0f, 0.0f) + movement,
+            glm::vec3(1.0f),
+            glm::vec3(0.0f)
+        );
+        glBindVertexArray(cube2VAO);
+        //week2::UpdateShaderUniforms_MATRIX(ourShader, cube2Model, view, projection);
+        week2::UpdateShaderUniforms_OLD(ourShader, 
+            glm::vec3(0.7f, 0.0f, 0.0f), // Position within the visible range
+            glm::vec3(0.3f),                // Smaller cube
+            glm::vec3(0.0f));
+        week2::RenderCube(); 
         
         glfwSwapBuffers(window);
-        glfwPollEvents();    
     }
     
     
