@@ -1479,6 +1479,11 @@ int main(int argc, char **argv) {
     glDeleteBuffers(1, &cubeVBO);
     glDeleteBuffers(1, &cubeEBO);
     
+    // Cube 2 cleanup
+    glDeleteVertexArrays(1, &cube2VAO);
+    glDeleteBuffers(1, &cube2VBO);
+    glDeleteBuffers(1, &cube2EBO);
+    
     // Sphere cleanup
     glDeleteVertexArrays(1, &sphereVAO);
     glDeleteBuffers(1, &sphereVBO);
