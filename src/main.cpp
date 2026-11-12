@@ -2,7 +2,9 @@
 #include "ShaderProgram.h" 
 
 // Standard Library
-#include <cassert>
+#include <cassert>          // assert
+#include <type_traits>      // std::is_standard_layout
+#include <limits>           // std::numeric_limits
 #include <cmath>
 #include <vector>
 #include <cstddef>
@@ -211,7 +213,6 @@ namespace
 
 
 
-
 namespace Palette
 {
     // Colours
@@ -235,219 +236,160 @@ namespace Palette
 }
 
 
-
-namespace week1
+namespace AcornData
 {
-    void CreateTriangleGeometry(unsigned int& VBO, unsigned int& VAO)
+    struct Transform
     {
-        float vertices[] = {
-            // positions         // colors
-            0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right 
-           -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left 
-           -0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
-       };  
-        
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glBindVertexArray(VAO);
-        
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        CheckOpenGLErrors("triangle geometry buffer setup");
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        // color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-        glEnableVertexAttribArray(1);
-        CheckOpenGLErrors("triangle geometry attribute setup");
-    }
-    
-    
-    void DrawTriangle(const ShaderProgram& shader, 
-        glm::vec2 position, glm::vec2 scale, float rotationRad, 
-        bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
-    {    
-        int positionLocation = glGetUniformLocation(shader.ID, "uPosition");
-        int scaleLocation = glGetUniformLocation(shader.ID, "uScale");
-        int rotationLocation = glGetUniformLocation(shader.ID, "uRotation");
-        
-        int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
-        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
-        
-        glm::vec3 position3D(position, 0.0f);
-        glm::vec3 scale3D(scale, 1.0f);
-        glm::vec3 rotation3D(0.0f, 0.0f, rotationRad);                      // needed to be updated to work with the newer 3D rotation                   
-        
-        // updates uniforms on the currently active program using the saved uniform locations 
-        glUniform3fv(positionLocation, 1, glm::value_ptr(position3D));      // needed to be sent in as pointer instead of directly vector 
-        glUniform3fv(scaleLocation, 1, glm::value_ptr(scale3D));
-        glUniform3fv(rotationLocation, 1, glm::value_ptr(rotation3D));
-        
-        glUniform1i(overrideLocation, colorOverride);
-        glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
-        CheckOpenGLErrors("setting triangle Uniform's");                        // Assumes the triangle's VAO is already bound.
-        
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        CheckOpenGLErrors("drawing triangle");
-    }
-
-
-    void DrawRectangle(const ShaderProgram& shader, 
-        glm::vec2 position, glm::vec2 scale, float rotationRad, 
-        bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
-    {
-        DrawTriangle(shader, position, scale, rotationRad, colorOverride, color);
-        DrawTriangle(shader, position, -scale, rotationRad, colorOverride, color);
-    }
-        
-    void DrawHouse2D(const ShaderProgram& shader,  float testRotation, bool bHideRainbowRoofColor)
-    {
-        //house shape
-        DrawRectangle(shader, glm::vec2(0.0f, -0.4f),  glm::vec2(1.2f,  0.8f), glm::radians(testRotation), true, Palette::orange); 
-        DrawTriangle(shader, glm::vec2(0.0f, 0.0f),  glm::vec2(1.0f,  1.0f), glm::radians(-135.0f), bHideRainbowRoofColor, Palette::magenta); 
-        //windows
-        DrawRectangle(shader, glm::vec2(-0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
-        DrawRectangle(shader, glm::vec2(0.25f, -0.2f), glm::vec2(0.3f, 0.2f), glm::radians(-testRotation), true, Palette::teal);
-        // door
-        DrawRectangle(shader, glm::vec2(0.0f, -0.6f),  glm::vec2(0.2f,  0.3f), glm::radians(testRotation), true, Palette::forestGreen);
-        DrawRectangle(shader, glm::vec2(0.05f, -0.6f),  glm::vec2(0.05f,  0.05f), glm::radians(testRotation), true, Palette::black);
-    }
-
-    struct HouseRuntimeInfo
-    {
-        // runtime changing values 
-        float testRotation = 0.0f;
-        
-        bool bPreviousSpacePress = false; 
-        bool bHideRainbowRoofColor = true;
-        
-        bool bPreviousEnterPress = false; 
-        bool bCrazyHouse = false; 
-        
-        
-        bool bPreviousQPress = false; 
-        bool bShowEyballs = false;
-        
-        float eyeMoveIncrement = 0.008f;
-        float currentEyeMovement = 0.0f; 
-        float maxRightMovement = 0.16f;
-        float maxLeftMovement = -0.16f;
-        bool bGoingRight = true;
+        glm::vec3 position{0.0f};
+        glm::vec3 rotationDegrees{0.0f};
+        glm::vec3 scale{1.0f};
     };
-
-    void DrawCrazyHouse2D(GLFWwindow* window, const ShaderProgram& houseShader, HouseRuntimeInfo& house)
-    {
-        // key presses
-        bool currentSpace = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-        bool currentEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
-        bool currentQ = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
-        
-        if (currentSpace && !house.bPreviousSpacePress)
-        {
-            house.bHideRainbowRoofColor = !house.bHideRainbowRoofColor;
-        }
-        house.bPreviousSpacePress = currentSpace;
-        
-        if (house.bHideRainbowRoofColor == false && currentEnter && !house.bPreviousEnterPress)
-        {
-            house.bCrazyHouse = !house.bCrazyHouse;
-        }
-        house.bPreviousEnterPress = currentEnter;
-        
-        if (currentQ && !house.bPreviousQPress)
-        {
-            house.bShowEyballs = !house.bShowEyballs;
-        }
-        house.bPreviousQPress = currentQ;
-        
-        
-        // house roof color changing, and eyeballs 
-        if (house.bHideRainbowRoofColor == false)
-        {
-            if (house.bGoingRight == true)
-            {
-                if (house.currentEyeMovement > house.maxRightMovement)
-                {
-                    house.bGoingRight = false;
-                }
-                house.currentEyeMovement += house.eyeMoveIncrement;
-            }
-            else
-            {
-                if (house.currentEyeMovement < house.maxLeftMovement)
-                {
-                    house.bGoingRight = true;
-                }
-                house.currentEyeMovement -= house.eyeMoveIncrement;
-            }
-            
-            if (house.bCrazyHouse == true)
-            {
-                house.testRotation += 0.6f;
-                if (house.testRotation >= 360.0f)
-                {
-                    house.testRotation = 0.0f;
-                }                
-            }
-            else
-            {
-                house.testRotation = 0.0f;
-            }
-        }
-        else
-        {
-            house.currentEyeMovement = 0.0f;
-            house.testRotation = 0.0f;
-            house.bCrazyHouse = false;
-        }
-        
-        
-        DrawHouse2D(houseShader, house.testRotation, house.bHideRainbowRoofColor);
-        
-        //eyes
-        if (house.bShowEyballs == true)
-        {
-            DrawRectangle(houseShader, glm::vec2(-0.25f + house.currentEyeMovement, -0.2f),  glm::vec2(0.09f,  0.09f), glm::radians(house.testRotation), true, Palette::white);
-            DrawRectangle(houseShader, glm::vec2(-0.25f + house.currentEyeMovement, -0.2f),  glm::vec2(0.05f,  0.05f), glm::radians(house.testRotation), true, Palette::black);
-            DrawRectangle(houseShader, glm::vec2(0.25f, -0.2f + house.currentEyeMovement),  glm::vec2(0.09f,  0.09f), glm::radians(house.testRotation), true, Palette::white);
-            DrawRectangle(houseShader, glm::vec2(0.25f, -0.2f + house.currentEyeMovement),  glm::vec2(0.05f,  0.05f), glm::radians(house.testRotation), true, Palette::black);
-        }
-    }
-
-}
-
-
-namespace week2
-{
-    // maybe.... look into later what values to do save like this, for example color? 
-    /*
+    
+    // describes one rendering vertex position plus associated attributes
     struct Vertex
+    {        
+        glm::vec3 position{0.0f};
+        glm::vec3 normal{0.0f};
+        glm::vec2 uv{0.0f};
+    };
+    static_assert(
+        std::is_standard_layout<Vertex>::value,
+        "Vertex must support standard-layout member offsets"
+    );
+    
+    struct FaceRange
     {
-        float px, py, pz;
-        float nx, ny, nz;
-        float u, v; 
+        std::size_t firstIndex = 0;
+        std::size_t indexCount = 0;
     };
     
+    // CPU-side geometry data
     struct MeshData
     {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices; 
+        std::vector<glm::vec3> colors;          // Empty when this mesh has no per-vertex colors.
+        
+        std::vector<FaceRange> faces;        
+        
+        bool hasNormals = false;
+        bool hasUVs = false;
     };
-    */
     
-    struct Pyramid
+    // GPU handles and drawing metadata
+    struct GpuMesh
     {
-        float pyramidVertices[5 * 6] = {
-            // positions            // colors
-            0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
-           -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
-           -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
-            0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
-            0.0f, 0.5f, 0.0f,       Palette::blue.r, Palette::blue.g, Palette::blue.b           // 4, up, middle
-       };  
-        unsigned int pyramidIndices[18] = {
-            // Pyramid: 18 indices
+        GLuint vao = 0;
+        GLuint vertexVBO = 0;
+        GLuint colorVBO = 0;
+        GLuint ebo = 0;
+        
+        GLsizei index_count = 0;
+        std::vector<FaceRange> faces;
+    };
+    
+    struct RenderObject
+    {        
+        const GpuMesh* mesh= nullptr;
+        Transform transform{};
+        
+        bool overrideColor = false;
+        glm::vec3 solidColor{1.0f};
+    };
+    
+}
+
+
+namespace AcornMath
+{
+    glm::mat4 BuildModelMatrix(glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees)
+    {
+        // A starting matrix that makes no change.
+        const glm::mat4 identity(1.0f);
+        
+        // Describe the object's size.
+        glm::mat4 scaleMatrix = glm::scale(
+            identity, 
+            scale
+        );
+        
+        // Describe rotation around the X axis.
+        glm::mat4 rotationMatrix_X = glm::rotate(
+            identity, 
+            glm::radians(rotationDegrees.x), 
+            glm::vec3(1.0f, 0.0f, 0.0f)
+        );
+        
+        // Describe rotation around the Y axis.
+        glm::mat4 rotationMatrix_Y = glm::rotate(
+            identity, 
+            glm::radians(rotationDegrees.y), 
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+        
+        // Describe rotation around the Z axis.
+        glm::mat4 rotationMatrix_Z = glm::rotate(
+            identity, 
+            glm::radians(rotationDegrees.z), 
+            glm::vec3(0.0f, 0.0f, 1.0f)
+        );
+        
+        // reads from right to left, rotation needs to be added X, then Y, then Z.
+        glm::mat4 rotationMatrix = rotationMatrix_Z * rotationMatrix_Y * rotationMatrix_X; 
+        
+        // Describe the object's position.
+        glm::mat4 translationMatrix = glm::translate(
+            identity, 
+            position
+        );
+        
+        
+        // reads from right to left, applying scale, then rotation, then position.           y=C(B(Ax)) 
+        glm::mat4 modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+        
+        return modelMatrix;
+    }
+    
+    glm::mat4 BuildModelMatrix(const AcornData::Transform& transform)
+    {
+        return BuildModelMatrix(
+            transform.position,
+            transform.scale,
+            transform.rotationDegrees
+        );
+    }
+    
+    
+}
+
+
+
+namespace  BasicMeshes
+{
+    AcornData::MeshData MakeBasicPyramid()
+    {
+        using AcornData::MeshData;   
+        
+        MeshData mesh;
+        
+        mesh.vertices = {
+            { glm::vec3( 0.5f, -0.5f, -0.5f) }, // 0, bottom, back right 
+            { glm::vec3(-0.5f, -0.5f, -0.5f) }, // 1, bottom, back left 
+            { glm::vec3(-0.5f, -0.5f,  0.5f) }, // 2, bottom, forward left 
+            { glm::vec3( 0.5f, -0.5f,  0.5f) }, // 3, bottom, forward right
+            { glm::vec3( 0.0f,  0.5f,  0.0f) }  // 4, up, middle
+        };
+        
+        mesh.colors = {
+            Palette::orange, // 0
+            Palette::green,  // 1
+            Palette::pink,   // 2
+            Palette::red,    // 3
+            Palette::blue    // 4
+        };
+        
+        // Pyramid: 18 indices
+        mesh.indices = {
             2, 1, 0,    // bottom, half1
             0, 3, 2,    // bottom, half2
             0, 4, 3,    // right side face
@@ -455,24 +397,50 @@ namespace week2
             2, 4, 1,    // left side face
             1, 4, 0,    // back side face
         };
-    };
-    
-    struct Cube1
-    {
-        float cubeVertices[8 * 6] = {
-            // positions            // colors
-            0.5f, -0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,    // 0, bottom, back right 
-           -0.5f, -0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,       // 1, bottom, back left 
-           -0.5f, -0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,          // 2, bottom, forward left 
-            0.5f, -0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,             // 3, bottom, forward right
         
-            0.5f, 0.5f, -0.5f,     Palette::orange.r, Palette::orange.g, Palette::orange.b,     // 4, up, back right 
-           -0.5f, 0.5f, -0.5f,     Palette::green.r, Palette::green.g, Palette::green.b,        // 5, up, back left 
-           -0.5f, 0.5f, 0.5f,      Palette::pink.r, Palette::pink.g, Palette::pink.b,           // 6, up, forward left 
-            0.5f, 0.5f, 0.5f,      Palette::red.r, Palette::red.g, Palette::red.b,              // 7, up, forward right
-        }; 
-        unsigned int cubeIndices[36] = {
-            // Cube: 36 indices
+        mesh.faces = {
+        {  0, 6 }, // Bottom.
+        {  6, 3 }, // Right.
+        {  9, 3 }, // Front.
+        { 12, 3 }, // Left.
+        { 15, 3 }  // Back.
+        };
+        
+        return mesh;
+    }
+    
+    AcornData::MeshData MakeBasicCube()
+    {
+        using AcornData::MeshData;  
+        
+        MeshData mesh;
+        
+        mesh.vertices = {
+            { glm::vec3( 0.5f, -0.5f, -0.5f)},  // 0, bottom, back right 
+            { glm::vec3(-0.5f, -0.5f, -0.5f)},  // 1, bottom, back left 
+            { glm::vec3(-0.5f, -0.5f, 0.5f)},   // 2, bottom, forward left 
+            { glm::vec3( 0.5f, -0.5f, 0.5f)},   // 3, bottom, forward right
+
+            { glm::vec3( 0.5f, 0.5f, -0.5f)},   // 4, up, back right 
+            { glm::vec3(-0.5f, 0.5f, -0.5f)},   // 5, up, back left 
+            { glm::vec3(-0.5f, 0.5f, 0.5f)},    // 6, up, forward left 
+            { glm::vec3( 0.5f, 0.5f, 0.5f)}     // 7, up, forward right
+        };
+        
+        mesh.colors = {
+            Palette::orange, // 0
+            Palette::green,  // 1
+            Palette::pink,   // 2
+            Palette::red,    // 3
+
+            Palette::orange, // 4 
+            Palette::green,  // 5
+            Palette::pink,   // 6
+            Palette::red     // 7
+        };
+        
+        // Cube: 36 indices
+        mesh.indices = {
             2, 1, 0,    // bottom face, half1
             0, 3, 2,    // bottom face, half2
             7, 3, 0,    // right side face, half1
@@ -486,50 +454,103 @@ namespace week2
             6, 7, 4,    // top side face, half1
             4, 5, 6,    // top side face, half2
         };
-    };
+        
+        mesh.faces = {
+        {  0, 6 },  // Bottom.
+        {  6, 6 },  // Right.
+        { 12, 6 },  // Front.
+        { 18, 6 },  // Left.
+        { 24, 6 },  // Back.
+        { 30, 6 }   // Top.
+        };
+        
+        return mesh; 
+    }
     
-    struct Cube2
+    AcornData::MeshData MakeBasicCube_v2()
     {
-        float cube2Vertices[24 * 6] = {
+        using AcornData::MeshData;  
+        
+        MeshData mesh;
+        
+        mesh.vertices = {
             // front face
-            -0.5f, -0.5f, 0.5f,     1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f, 0.5f,     1.0f, 0.0f, 0.0f,
-             0.5f,  0.5f, 0.5f,     1.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f, 0.5f,     1.0f, 1.0f, 0.0f,
+            { glm::vec3(-0.5f, -0.5f, 0.5f)},
+            { glm::vec3( 0.5f, -0.5f, 0.5f)},
+            { glm::vec3( 0.5f,  0.5f, 0.5f)},
+            { glm::vec3(-0.5f,  0.5f, 0.5f)},
         
             // Back face
-            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
+            { glm::vec3(-0.5f, -0.5f, -0.5f)},
+            { glm::vec3(-0.5f,  0.5f, -0.5f)},
+            { glm::vec3( 0.5f,  0.5f, -0.5f)},
+            { glm::vec3( 0.5f, -0.5f, -0.5f)},
         
             // Bottom face
-            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
+            { glm::vec3(-0.5f, -0.5f, -0.5f)},
+            { glm::vec3( 0.5f, -0.5f, -0.5f)},
+            { glm::vec3( 0.5f, -0.5f,  0.5f)},
+            { glm::vec3(-0.5f, -0.5f,  0.5f)},
         
             //Top face
-            -0.5f, 0.5f,  -0.5f,    1.0f, 0.0f, 0.0f,
-            -0.5f, 0.5f,   0.5f,    1.0f, 1.0f, 0.0f,
-             0.5f, 0.5f,   0.5f,    1.0f, 1.0f, 0.0f,
-             0.5f, 0.5f,  -0.5f,    1.0f, 0.0f, 0.0f,
+            { glm::vec3(-0.5f, 0.5f,  -0.5f)},
+            { glm::vec3(-0.5f, 0.5f,   0.5f)},
+            { glm::vec3( 0.5f, 0.5f,   0.5f)},
+            { glm::vec3( 0.5f, 0.5f,  -0.5f)},
         
             // Left face
-            -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
+            { glm::vec3(-0.5f, -0.5f, -0.5f)},
+            { glm::vec3(-0.5f, -0.5f,  0.5f)},
+            { glm::vec3(-0.5f,  0.5f,  0.5f)},
+            { glm::vec3(-0.5f,  0.5f, -0.5f)},
         
             // Right face
-            0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
-            0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
-            0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 0.0f,
-            0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
+            { glm::vec3(0.5f, -0.5f, -0.5f)},
+            { glm::vec3(0.5f,  0.5f, -0.5f)},
+            { glm::vec3(0.5f,  0.5f,  0.5f)},
+            { glm::vec3(0.5f, -0.5f,  0.5f)},
         };
-    
-        unsigned int cube2Indices[36] = {
-            // Cube: 36 indices
+        
+        mesh.colors = {
+            // front face
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+        
+            // Back face
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+        
+            // Bottom face
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+        
+            //Top face
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+        
+            // Left face
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+        
+            // Right face
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 0.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+        };
+        
+        // Cube: 36 indices
+        mesh.indices = {
             // Front face
             0,  1,  2,   2,  3,  0,
            // Back face
@@ -543,11 +564,23 @@ namespace week2
            // Right face
            20, 21, 22,  22, 23, 20
         };
-    };
         
+        mesh.faces = {
+        {  0, 6 }, // Front.
+        {  6, 6 }, // Back.
+        { 12, 6 }, // Bottom.
+        { 18, 6 }, // Top.
+        { 24, 6 }, // Left.
+        { 30, 6 }  // Right.
+        };
+        
+        return mesh; 
+    }
+    
+    
     
         // It's not the nicest sphere, nor the nicest code, but it sort of works.
-    void generateSortofSphere(std::vector<float> &vertices, std::vector<unsigned int> &indices, int rings, int slices) {
+    void generateSortofSphere(std::vector<float> &vertices, std::vector<unsigned int> &indices, int rings = 9, int slices = 16) {
 
         if (rings < 3)  { std::cout << "no sphere generated. rings value < 3"  << std::endl;  return; }
         if (slices < 4) { std::cout << "no sphere generated. slices value < 4" << std::endl;  return; }
@@ -635,44 +668,311 @@ namespace week2
         std::cout << "Sphere triangle count:" << indices.size() / 3 << std::endl;
     }
     
-    
-    // expects 3 position attributes followed by 3 color attributes 
-    void SetupGometryToRender(unsigned int& VAO, unsigned int& VBO, unsigned int& EBO, 
-        const float* vertices, GLsizeiptr verticesSizeBytes, const unsigned int* indices, GLsizeiptr indicesSizeBytes)
+    AcornData::MeshData generateSortofSphere_Color(int rings = 9, int slices = 16)
     {
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glGenBuffers(1, &EBO);
-        glBindVertexArray(VAO);      // selecting VAO to bind things to 
+        using AcornData::MeshData;  
+        
+        MeshData sphereMesh;  
+        std::vector<float> spherePositions; 
+        
+        generateSortofSphere(spherePositions, sphereMesh.indices, rings, slices); 
+        
+        for (std::size_t i = 0; i < spherePositions.size(); i += 3)
+        {
+            // Position,    and reducing the generated diameter from 2 to 1.
+            AcornData::Vertex vertex;
+            vertex.position = glm::vec3(
+                spherePositions[i], 
+                spherePositions[i + 1],
+                spherePositions[i + 2]
+            ) * 0.5f;
+            
+            sphereMesh.vertices.push_back(vertex); 
+            
+            // Color
+            sphereMesh.colors.push_back(Palette::orange);
+        }
+        
+        return sphereMesh; 
+    };    
     
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, verticesSizeBytes, vertices, GL_STATIC_DRAW);
-        CheckOpenGLErrors("geometry buffer setup");
-        
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSizeBytes, indices, GL_STATIC_DRAW);
-        CheckOpenGLErrors("EBO buffer setup");
-        
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        // color attribute
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-        glEnableVertexAttribArray(1);
-        CheckOpenGLErrors("geometry attribute setup");
-        
-        glBindVertexArray(0); 
+    AcornData::MeshData MakeBasicSphere()
+    {
+        return generateSortofSphere_Color();
     }
     
-    struct GeometryRuntimeValues_Transforms
-    {   
+}
+
+
+namespace Rendering
+{
+    
+    AcornData::GpuMesh CreateGpuMesh(const AcornData::MeshData& mesh, GLenum usage = GL_STATIC_DRAW)
+    {
+        using AcornData::Vertex;
+        using AcornData::GpuMesh;
+        // Colours are absent, or there is one colour per vertex.
+        assert(mesh.colors.empty() || mesh.colors.size() == mesh.vertices.size());
+        
+        // Triangle indices come in groups of three.
+        assert(mesh.indices.size() % 3 == 0);       
+        // Every index refers to an existing vertex.
+        for (unsigned int index : mesh.indices)     
+        {
+            assert(index < mesh.vertices.size());
+        }
+        // The total index count fits the draw-call parameter.
+        assert(mesh.indices.size() <= static_cast<std::size_t>((std::numeric_limits<GLsizei>::max)()));  
+        
+        
+        // ----- Setup -----
+        
+        GpuMesh gpu; 
+        gpu.index_count = static_cast<GLsizei>(mesh.indices.size());
+        gpu.faces = mesh.faces;
+        
+        glGenVertexArrays(1, &gpu.vao);
+        glGenBuffers(1, &gpu.vertexVBO);
+        glGenBuffers(1, &gpu.ebo);
+        glBindVertexArray(gpu.vao);
+        
+        
+        // ----- Vertex VBO -----
+        glBindBuffer(GL_ARRAY_BUFFER, gpu.vertexVBO);
+        GLsizeiptr verticesSizeBytes = static_cast<GLsizeiptr>(mesh.vertices.size() * sizeof(Vertex));          // number of elements x bytes per element.
+        glBufferData(GL_ARRAY_BUFFER, verticesSizeBytes, mesh.vertices.data(), usage);
+        
+        // position,        in attribute slot 0
+        glVertexAttribPointer(
+            0, 3, GL_FLOAT, GL_FALSE, 
+            static_cast<GLsizei>(sizeof(Vertex)), 
+            reinterpret_cast<const void*>(offsetof(Vertex, position))
+        );
+        glEnableVertexAttribArray(0);
+        
+        // normal,          in attribute slot 2
+        if (mesh.hasNormals)
+        {
+            glVertexAttribPointer(
+                2, 3, GL_FLOAT, GL_FALSE, 
+                static_cast<GLsizei>(sizeof(Vertex)), 
+                reinterpret_cast<const void*>(offsetof(Vertex, normal))
+            );
+            
+            glEnableVertexAttribArray(2);
+        }
+        else
+        {
+            glDisableVertexAttribArray(2);
+        }
+        
+        // uv,              in attribute slot 3
+        if (mesh.hasUVs)
+        {
+            glVertexAttribPointer(
+                3, 2, GL_FLOAT, GL_FALSE,
+                static_cast<GLsizei>(sizeof(Vertex)),
+                reinterpret_cast<const void*>(offsetof(Vertex, uv))
+            );
+            
+            glEnableVertexAttribArray(3);
+        }
+        else
+        {
+            glDisableVertexAttribArray(3);
+        }
+        CheckOpenGLErrors("geometry buffer and attribute setup");
+        
+        
+        // ----- Color VBO -----
+        if (!mesh.colors.empty())
+        {
+            glGenBuffers(1, &gpu.colorVBO);
+            glBindBuffer(GL_ARRAY_BUFFER, gpu.colorVBO);
+            
+            // color buffer
+            GLsizeiptr colorsSizeBytes = static_cast<GLsizeiptr>(mesh.colors.size() * sizeof(glm::vec3)); 
+            glBufferData(GL_ARRAY_BUFFER, colorsSizeBytes, mesh.colors.data(), usage);
+            
+            // color attribute
+            glVertexAttribPointer(
+                1, 3, GL_FLOAT, GL_FALSE, 
+                static_cast<GLsizei>(sizeof(glm::vec3)), 
+                nullptr
+            );
+            glEnableVertexAttribArray(1);
+        }
+        else
+        {
+            glDisableVertexAttribArray(1);
+        }
+        CheckOpenGLErrors("color buffer and attribute setup");
+        
+        
+        // ----- EBO -----
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
+        
+        GLsizeiptr indicesSizeBytes = static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned int)); 
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSizeBytes, mesh.indices.data(), usage);
+        CheckOpenGLErrors("EBO buffer setup");
+        
+        
+        // ----- Finish setup -----
+        glBindVertexArray(0);
+        CheckOpenGLErrors("mesh setup");
+
+        return gpu; 
+    }
+    
+    void DestroyGpuMesh(AcornData::GpuMesh& mesh)
+    {
+        glDeleteVertexArrays(1, &mesh.vao);
+
+        glDeleteBuffers(1, &mesh.vertexVBO);
+        glDeleteBuffers(1, &mesh.colorVBO);
+        glDeleteBuffers(1, &mesh.ebo);
+
+        mesh = AcornData::GpuMesh{};
+    }
+    
+    void SetBasicShaderUniforms(
+        const ShaderProgram& shader,
+        const glm::mat4& model,
+        const glm::mat4& view,
+        const glm::mat4& projection,
+        bool colorOverride = false,
+        glm::vec3 color = glm::vec3(1.0f))
+    {
+        glUseProgram(shader.ID); 
+        const BasicUniformLocations& uniforms = shader.GetBasicUniformLocations();
+        
+        // updates uniforms on the currently active program using the saved uniform locations 
+        glUniformMatrix4fv(uniforms.modelLocation, 1 ,GL_FALSE,  glm::value_ptr(model));
+        glUniformMatrix4fv(uniforms.viewLocation, 1 ,GL_FALSE,  glm::value_ptr(view));
+        glUniformMatrix4fv(uniforms.projectionLocation, 1 ,GL_FALSE,  glm::value_ptr(projection));
+        
+        glUniform1i(uniforms.overrideColorLocation, colorOverride);
+        glUniform3fv(uniforms.colorLocation, 1, glm::value_ptr(color));  
+        CheckOpenGLErrors("setting geometry Uniform's");
+    }
+    
+    void DrawMesh(const AcornData::GpuMesh& mesh)
+    {
+        assert(mesh.vao != 0);
+        
+        glBindVertexArray(mesh.vao);
+        glDrawElements(GL_TRIANGLES, mesh.index_count, GL_UNSIGNED_INT, nullptr);
+        
+        glBindVertexArray(0);
+        CheckOpenGLErrors("drawing mesh");
+    }
+    
+    void DrawMesh_FaceColors(
+        const ShaderProgram& shader, 
+        const AcornData::GpuMesh& mesh,  
+        const std::vector<glm::vec3>& faceColors)
+    {
+        assert(mesh.vao != 0);
+        assert(mesh.index_count >= 0);
+        
+        const auto& faces = mesh.faces;
+        
+        assert(!faces.empty());
+        assert(faces.size() == faceColors.size());
+        
+        const std::size_t totalIndexCount = static_cast<std::size_t>(mesh.index_count);
+        
+        // Check that each range fits within the uploaded index list.
+        for (const AcornData::FaceRange& range : faces)
+        {
+            assert(range.indexCount > 0);
+            assert(range.indexCount % 3 == 0);
+            assert(range.firstIndex <= totalIndexCount);
+            assert(range.indexCount <= totalIndexCount - range.firstIndex);
+        }
+        
+        
+        glUseProgram(shader.ID);
+        glBindVertexArray(mesh.vao);
+        
+        const auto& uniforms = shader.GetBasicUniformLocations();
+        
+        // This function requires a shader with these active uniforms.
+        assert(uniforms.overrideColorLocation != -1);
+        assert(uniforms.colorLocation != -1);
+        
+        glUniform1i(uniforms.overrideColorLocation, GL_TRUE);
+        
+        for (std::size_t face = 0; face < faces.size(); ++face)
+        {
+            const AcornData::FaceRange& range = faces[face];
+            const std::size_t offsetBytes = range.firstIndex * sizeof(unsigned int);
+            
+            glUniform3fv(uniforms.colorLocation, 1, glm::value_ptr(faceColors[face]));
+            
+            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(range.indexCount), GL_UNSIGNED_INT, reinterpret_cast<const void*>(offsetBytes));
+        }
+        
+        glUniform1i(uniforms.overrideColorLocation, GL_FALSE);
+        glBindVertexArray(0);
+        CheckOpenGLErrors("drawing mesh with different face colors");
+    }
+    
+    
+}
+
+
+
+
+
+
+
+namespace Demo
+{   
+    namespace TestColors
+    {
+        const std::vector<glm::vec3> pyramid_FaceColors{
+            Palette::pink,    // Bottom
+            Palette::yellow,  // Right
+            Palette::red,     // Front
+            Palette::green,   // Left
+            Palette::blue,    // Back
+        };
+        
+        // has to match EBO draw order
+        const std::vector<glm::vec3> cube_FaceColors{
+            Palette::red,     // Bottom
+            Palette::orange,  // Right
+            Palette::pink,    // Front
+            Palette::green,   // Left
+            Palette::blue,    // Back
+            Palette::yellow   // Top
+        };
+    };
+    
+    struct GeometryRuntimeValues_Inputs
+    {
         bool bPreviousPress_Space = false;
         
         // Scale
         bool bPreviousPress_Q = false;
         bool bPreviousPress_W = false;
         bool bPreviousPress_E = false;
+        
+        // Rotation
+        bool bPreviousPress_A = false;
+        bool bPreviousPress_S = false;
+        bool bPreviousPress_D = false;
+        
+        // Location
+        bool bPreviousPress_Z = false;
+        bool bPreviousPress_X = false;
+        bool bPreviousPress_C = false;
+    };
     
+    struct GeometryRuntimeValues_Transforms
+    {   
+        // Scale
         bool bScaleX = false;
         bool bScaleY = false;
         bool bScaleZ = false;
@@ -682,23 +982,15 @@ namespace week2
         bool bGrowingX = true;
         bool bGrowingY = true;
         bool bGrowingZ = true;
-        
-        // Rotation
-        bool bPreviousPress_A = false;
-        bool bPreviousPress_S = false;
-        bool bPreviousPress_D = false;
     
+        // Rotation
         bool bRotateX = false;
         bool bRotateY = false;
         bool bRotateZ = false;
     
         glm::vec3 rotationDegrees = glm::vec3 (0.0f);
-        
-        // Location
-        bool bPreviousPress_Z = false;
-        bool bPreviousPress_X = false;
-        bool bPreviousPress_C = false;
     
+        // Location
         bool bTranslateX = false;
         bool bTranslateY = false;
         bool bTranslateZ = false;
@@ -710,16 +1002,19 @@ namespace week2
         bool bPositivMovementZ = true; 
     };
     
-    void HandleRuntimeInputs(GLFWwindow* window, GeometryRuntimeValues_Transforms& values)
+    void HandleRuntimeInputs(
+        GLFWwindow* window, 
+        GeometryRuntimeValues_Inputs& inputs, 
+        GeometryRuntimeValues_Transforms& values)
     {
         bool current_Space = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
         bool bReset = false; 
         
-        if (current_Space && !values.bPreviousPress_Space)
+        if (current_Space && !inputs.bPreviousPress_Space)
         {
             bReset = !bReset;
         }
-        values.bPreviousPress_Space = current_Space;
+        inputs.bPreviousPress_Space = current_Space;
         
         
         bool current_Q = glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS;
@@ -735,61 +1030,61 @@ namespace week2
         bool current_C = glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS;
         
         // scale key inputs
-        if (current_Q && !values.bPreviousPress_Q)
+        if (current_Q && !inputs.bPreviousPress_Q)
         {
             values.bScaleX = !values.bScaleX;
         }
-        values.bPreviousPress_Q = current_Q;
+        inputs.bPreviousPress_Q = current_Q;
         
-        if (current_W && !values.bPreviousPress_W)
+        if (current_W && !inputs.bPreviousPress_W)
         {
             values.bScaleY = !values.bScaleY;
         }
-        values.bPreviousPress_W = current_W;
+        inputs.bPreviousPress_W = current_W;
         
-        if (current_E && !values.bPreviousPress_E)
+        if (current_E && !inputs.bPreviousPress_E)
         {
             values.bScaleZ = !values.bScaleZ;
         }
-        values.bPreviousPress_E = current_E;
+        inputs.bPreviousPress_E = current_E;
         
         // rotation key inputs
-        if (current_A && !values.bPreviousPress_A)
+        if (current_A && !inputs.bPreviousPress_A)
         {
             values.bRotateX = !values.bRotateX;
         }
-        values.bPreviousPress_A = current_A;
+        inputs.bPreviousPress_A = current_A;
         
-        if (current_S && !values.bPreviousPress_S)
+        if (current_S && !inputs.bPreviousPress_S)
         {
             values.bRotateY = !values.bRotateY;
         }
-        values.bPreviousPress_S = current_S;
+        inputs.bPreviousPress_S = current_S;
         
-        if (current_D && !values.bPreviousPress_D)
+        if (current_D && !inputs.bPreviousPress_D)
         {
             values.bRotateZ = !values.bRotateZ;
         }
-        values.bPreviousPress_D = current_D;
+        inputs.bPreviousPress_D = current_D;
         
         // translate key inputs
-        if (current_Z && !values.bPreviousPress_Z)
+        if (current_Z && !inputs.bPreviousPress_Z)
         {
             values.bTranslateX = !values.bTranslateX;
         }
-        values.bPreviousPress_Z = current_Z;
+        inputs.bPreviousPress_Z = current_Z;
         
-        if (current_X && !values.bPreviousPress_X)
+        if (current_X && !inputs.bPreviousPress_X)
         {
             values.bTranslateY = !values.bTranslateY;
         }
-        values.bPreviousPress_X = current_X;
+        inputs.bPreviousPress_X = current_X;
         
-        if (current_C && !values.bPreviousPress_C)
+        if (current_C && !inputs.bPreviousPress_C)
         {
             values.bTranslateZ = !values.bTranslateZ;
         }
-        values.bPreviousPress_C = current_C;        
+        inputs.bPreviousPress_C = current_C;        
         
         
         // reset of scale and rotation 
@@ -969,214 +1264,20 @@ namespace week2
         }
     }
     
-    void UpdateShaderUniforms_OLD(const ShaderProgram& shader, 
-        glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees, 
-        bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
-    {
-        int bUseMatrices = glGetUniformLocation(shader.ID, "uUseMatrices");
-        
-        int positionLocation = glGetUniformLocation(shader.ID, "uPosition");
-        int scaleLocation = glGetUniformLocation(shader.ID, "uScale");
-        int rotationLocation = glGetUniformLocation(shader.ID, "uRotation");
-    
-        int overrideLocation = glGetUniformLocation(shader.ID, "uColorOverride");
-        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
-        
-        glUniform1i(bUseMatrices, false); 
-        
-        glm::vec3 rotationRad = glm::radians(rotationDegrees);                     // convert from angles in degrees to radians
-    
-        // updates uniforms on the currently active program using the saved uniform locations 
-        glUniform3fv(positionLocation, 1, glm::value_ptr(position));      // needed to be sent in as pointer instead of directly vector 
-        glUniform3fv(scaleLocation, 1, glm::value_ptr(scale));
-        glUniform3fv(rotationLocation, 1, glm::value_ptr(rotationRad));
-        
-        glUniform1i(overrideLocation, colorOverride);
-        glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
-        CheckOpenGLErrors("setting geometry Uniform's");                   
-    }
-    
-    glm::mat4 BuildModelMatrix(glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees)
-    {
-        // A starting matrix that makes no change.
-        const glm::mat4 identity(1.0f);
-        
-        // Describe the object's size.
-        glm::mat4 scaleMatrix = glm::scale(
-            identity, 
-            scale
-        );
-        
-        // Describe rotation around the Y axis.
-        glm::mat4 rotationMatrix_X = glm::rotate(
-            identity, 
-            glm::radians(rotationDegrees.x), 
-            glm::vec3(1.0f, 0.0f, 0.0f)
-        );
-        
-        // Describe rotation around the Y axis.
-        glm::mat4 rotationMatrix_Y = glm::rotate(
-            identity, 
-            glm::radians(rotationDegrees.y), 
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
-        
-        // Describe rotation around the Y axis.
-        glm::mat4 rotationMatrix_Z = glm::rotate(
-            identity, 
-            glm::radians(rotationDegrees.z), 
-            glm::vec3(0.0f, 0.0f, 1.0f)
-        );
-        
-        // reads from right to left, rotation needs to be added X, then Y, then Z. 
-        glm::mat4 rotationMatrix = rotationMatrix_Z * rotationMatrix_Y * rotationMatrix_X; 
-        
-        // Describe the object's position.
-        glm::mat4 translationMatrix = glm::translate(
-            identity, 
-            position
-        );
-        
-        // reads from right to left, applying scale, then rotation, then position
-        glm::mat4 modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
-        
-        return modelMatrix;
-    }
-    
-    void UpdateShaderUniforms_MATRIX(const ShaderProgram& shader, 
-        glm::mat4 model, glm::mat4 view, glm::mat4 projection, 
-        bool colorOverride = false, glm::vec3 color = glm::vec3(1.0f))
-    {
-        int bUseMatricesLocation = glGetUniformLocation(shader.ID, "uUseMatrices");
-        
-        int modelLocation = glGetUniformLocation(shader.ID, "uModel");
-        int viewLocation = glGetUniformLocation(shader.ID, "uView");
-        int projectionLocation = glGetUniformLocation(shader.ID, "uProjection");
-    
-        int bOverrideColorLocation = glGetUniformLocation(shader.ID, "uColorOverride");
-        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
-        
-        glUniform1i(bUseMatricesLocation, GL_TRUE); 
-        
-        
-        // updates uniforms on the currently active program using the saved uniform locations 
-        glUniformMatrix4fv(modelLocation, 1 ,GL_FALSE,  glm::value_ptr(model));
-        glUniformMatrix4fv(viewLocation, 1 ,GL_FALSE,  glm::value_ptr(view));
-        glUniformMatrix4fv(projectionLocation, 1 ,GL_FALSE,  glm::value_ptr(projection));
-        
-        
-        glUniform1i(bOverrideColorLocation, colorOverride);
-        glUniform3fv(colorLocation, 1, glm::value_ptr(color));  
-        CheckOpenGLErrors("setting geometry Uniform's");                   
-    }
-    
-    
-    void RenderPyramid()
-    {        
-        glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-        CheckOpenGLErrors("drawing pyramid");
-    }
-    
-    void RenderCube()
-    {        
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-        CheckOpenGLErrors("drawing cube");
-    }    
-    
-    void RenderSphere(GLsizei indexCount) 
-    {        
-        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-        CheckOpenGLErrors("drawing sphere");
-    }
-    
-    
-    void RenderPyramid_FullFaceColors(const ShaderProgram& shader)
-    {
-        int bOverrideColorLocation = glGetUniformLocation(shader.ID, "uColorOverride");
-        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
-        
-        glUniform1i(bOverrideColorLocation, GL_TRUE);
-        
-        // has to match EBO draw order
-        glm::vec3 faceColors[5] = {
-            Palette::pink,    // Bottom
-            Palette::yellow,  // Right
-            Palette::red,     // Front
-            Palette::green,   // Left
-            Palette::blue,    // Back
-        };
-        
-        std::size_t offsetBytes = 0;
-        
-        // draw one face each loop
-        for (int face = 0; face < 5; ++face)
-        {
-            GLsizei indexCount;
-            
-            if (face == 0)
-            {
-                indexCount = 6; // Square bottom: two triangles.
-            }
-            else
-            {
-                indexCount = 3; // Each side: one triangle.
-            }
-
-            glUniform3fv(colorLocation, 1, glm::value_ptr(faceColors[face]));
-            
-            glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, reinterpret_cast<const void*>(offsetBytes));
-            
-            offsetBytes += static_cast<std::size_t>(indexCount) * sizeof(unsigned int);
-        }
-        
-        glUniform1i(bOverrideColorLocation, GL_FALSE);
-        glBindVertexArray(0);
-        CheckOpenGLErrors("drawing pyramid with different face colors");
-    }
-    
-    void RenderCube_FullFaceColors(const ShaderProgram& shader)
-    {
-        int bOverrideColorLocation = glGetUniformLocation(shader.ID, "uColorOverride");
-        int colorLocation = glGetUniformLocation(shader.ID, "uSolidColor");
-        
-        glUniform1i(bOverrideColorLocation, GL_TRUE);
-        
-        // has to match EBO draw order
-        glm::vec3 faceColors[6] = {
-            Palette::red,     // Bottom
-            Palette::orange,  // Right
-            Palette::pink,    // Front
-            Palette::green,   // Left
-            Palette::blue,    // Back
-            Palette::yellow  // Top
-        };
-        
-        // draw six vertex points at a time in one color, making a single face each loop 
-        for (int face = 0; face < 6; ++face)
-        {
-            glUniform3fv(colorLocation, 1, glm::value_ptr(faceColors[face]));
-            
-            std::size_t offsetBytes = face * 6 * sizeof(unsigned int);
-            
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, reinterpret_cast<const void*>(offsetBytes));
-        }
-        
-        glUniform1i(bOverrideColorLocation, GL_FALSE);
-        glBindVertexArray(0);
-        CheckOpenGLErrors("drawing cube with different face colors");
-    }
     
 }
 
 
 
 
-
-
 int main(int argc, char **argv) {
+    
+    using AcornData::Transform;
+    using AcornData::Vertex;
+    using AcornData::MeshData;
+    using AcornData::GpuMesh;
+    using AcornData::RenderObject; 
+    
     
     std::cout << "hello world!" << '\n';   // std::endl;
     
@@ -1199,8 +1300,8 @@ int main(int argc, char **argv) {
     glViewport(0, 0, frameBufferWidth, frameBufferHeight);
     
     
-    ShaderProgram ourShader("shaders/basic.vert", "shaders/basic.frag");
-    if (!ourShader.IsValid())
+    ShaderProgram shaderProgram("shaders/basic.vert", "shaders/basic.frag");
+    if (!shaderProgram.IsValid())
     {
         std::cerr << "[Startup] Required shader failed; exiting.\n";
         
@@ -1210,64 +1311,53 @@ int main(int argc, char **argv) {
     }
     CheckOpenGLErrors("shader setup");
     
+    // currently needs to be called every time after linking program 
+    shaderProgram.CacheBasicUniformLocations();
     
     
-    unsigned int triangleVBO, triangleVAO;
-    week1::CreateTriangleGeometry(triangleVBO, triangleVAO);
+    // preparing rendering objects  
+    MeshData pyramidData = BasicMeshes::MakeBasicPyramid();
+    MeshData cubeData = BasicMeshes::MakeBasicCube();
+    MeshData cube2Data = BasicMeshes::MakeBasicCube_v2();
+    MeshData sphereData = BasicMeshes::MakeBasicSphere();
+    
+    GpuMesh pyramidGpu = Rendering::CreateGpuMesh(pyramidData);
+    GpuMesh cubeGpu = Rendering::CreateGpuMesh(cubeData);
+    GpuMesh cubeGpu_v2 = Rendering::CreateGpuMesh(cube2Data);
+    GpuMesh sphereGpu = Rendering::CreateGpuMesh(sphereData);
     
     
+    // making object instances
+    RenderObject pyramid_1{&pyramidGpu};
+    pyramid_1.transform.position = glm::vec3(-4.0f, 0.0f, 1.0f);
     
-    // create pyramid 
-    week2::Pyramid pyramid = {};
-    unsigned int pyramidVAO, pyramidVBO, pyramidEBO;
-    week2::SetupGometryToRender(pyramidVAO, pyramidVBO, pyramidEBO, 
-        pyramid.pyramidVertices, sizeof(pyramid.pyramidVertices), pyramid.pyramidIndices, sizeof(pyramid.pyramidIndices));
+    RenderObject pyramid_2{&pyramidGpu, Transform{}, true, Palette::blue};
+    pyramid_2.transform.position = glm::vec3(-4.0f, 0.0f, -2.5f);
+    pyramid_2.transform.rotationDegrees = glm::vec3(180.0f, 0.0f, 0.0f);
     
-    
-    // create cube version 1  
-    week2::Cube1 cube1 = {};
-    unsigned int cubeVAO,  cubeVBO, cubeEBO;
-    week2::SetupGometryToRender(cubeVAO, cubeVBO, cubeEBO,
-        cube1.cubeVertices, sizeof(cube1.cubeVertices), cube1.cubeIndices, sizeof(cube1.cubeIndices));
-    
-    // create cube version 2 
-    week2::Cube2 cube2 = {};
-    unsigned int cube2VAO,  cube2VBO, cube2EBO;
-    week2::SetupGometryToRender(cube2VAO, cube2VBO, cube2EBO,
-        cube2.cube2Vertices, sizeof(cube2.cube2Vertices), cube2.cube2Indices, sizeof(cube2.cube2Indices));
+    RenderObject pyramid_manual{&pyramidGpu};
+    pyramid_manual.transform.position = glm::vec3(0.0f, 0.0f, 4.0f);
     
     
-    // create sphere
-    std::vector<float> spherePositions; 
-    std::vector<unsigned int> sphereIndices; 
-    week2::generateSortofSphere(spherePositions, sphereIndices, 8, 16); 
-    // convert the sphere vectors to the XYZ + RGB layout my other functions use 
-    std::vector<float> sphereVertices;
-    glm::vec3 sphereColor(1.0f, 0.5f, 0.0f); // Orange
-    for (std::size_t i = 0; i < spherePositions.size(); i += 3)
-    {
-        // Position
-        sphereVertices.push_back(spherePositions[i]);
-        sphereVertices.push_back(spherePositions[i + 1]);
-        sphereVertices.push_back(spherePositions[i + 2]);
-
-        // Color
-        sphereVertices.push_back(sphereColor.r);
-        sphereVertices.push_back(sphereColor.g);
-        sphereVertices.push_back(sphereColor.b);
-    }
+    RenderObject cube_1{&cubeGpu};
+    cube_1.transform.position = glm::vec3(0.0f, 0.0f, 1.0f);
     
-    unsigned int sphereVAO, sphereVBO, sphereEBO;
-    week2::SetupGometryToRender(sphereVAO, sphereVBO, sphereEBO,  
-        sphereVertices.data(), static_cast<GLsizeiptr>(sphereVertices.size() * sizeof(float)),
-        sphereIndices.data(), static_cast<GLsizeiptr>(sphereIndices.size() * sizeof(unsigned int))
-    ); 
+    RenderObject cube_2{&cubeGpu, Transform{}, true, Palette::pink};
+    cube_2.transform.position = glm::vec3(0.0f, 0.0f, -2.5f);
     
-    GLsizei sphereIndexCount = static_cast<GLsizei>(sphereIndices.size());
+    RenderObject cube_V2{&cubeGpu_v2};
+    cube_V2.transform.position = glm::vec3(0.0f, 0.0f, -7.0f);
+    
+    
+    RenderObject sphere_1{&sphereGpu};
+    sphere_1.transform.position = glm::vec3(3.0f, 0.0f, -1.0f);
+    
+    RenderObject sphere_2{&sphereGpu, Transform{}, true, Palette::forestGreen};
+    sphere_2.transform.position = glm::vec3(4.5f, 0.0f, -2.5f);
     
     
     
-    
+    // camera, perspective 
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
     
@@ -1281,28 +1371,29 @@ int main(int argc, char **argv) {
     
     // face culling
     GeometryRenderSettings renderSettings = {};
-    glEnable(GL_CULL_FACE);
     renderSettings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
     
-    // enable depth 
+    // enable depth view 
     glEnable(GL_DEPTH_TEST);
+    
     
     
     // runtime values
     double previousTime = glfwGetTime();
     
-    week1::HouseRuntimeInfo houseRuntimeInfo = {};
     renderSettings.bPerspectiveView = true; 
     
     // controlled by keyboard toggles.
-    week2::GeometryRuntimeValues_Transforms runtimeInfo = {};
+    Demo::GeometryRuntimeValues_Inputs runtime_Inputs = {}; 
+    Demo::GeometryRuntimeValues_Transforms runtime_Info = {};
     // Automatic animations.
-    week2::GeometryRuntimeValues_Transforms cubeAuto;
+    Demo::GeometryRuntimeValues_Transforms cubeAuto;
     cubeAuto.bRotateY = true;
-    week2::GeometryRuntimeValues_Transforms sphereAuto;
+    Demo::GeometryRuntimeValues_Transforms sphereAuto;
     sphereAuto.bTranslateZ = true;
-    week2::GeometryRuntimeValues_Transforms pyramidAuto;
+    Demo::GeometryRuntimeValues_Transforms pyramidAuto;
     pyramidAuto.bScaleY = true;
+    
     
     
     // render loop
@@ -1322,12 +1413,12 @@ int main(int argc, char **argv) {
         // update runtime logic
         processInput_RenderSettings(window, renderSettings);
         
-        week2::HandleRuntimeInputs(window, runtimeInfo);
+        Demo::HandleRuntimeInputs(window, runtime_Inputs, runtime_Info);
 
-        week2::UpdateTransforms(runtimeInfo, deltaTime);
-        week2::UpdateTransforms(cubeAuto, deltaTime);
-        week2::UpdateTransforms(sphereAuto, deltaTime);
-        week2::UpdateTransforms(pyramidAuto, deltaTime);
+        Demo::UpdateTransforms(runtime_Info, deltaTime);
+        Demo::UpdateTransforms(cubeAuto, deltaTime);
+        Demo::UpdateTransforms(sphereAuto, deltaTime);
+        Demo::UpdateTransforms(pyramidAuto, deltaTime);
         
         
         glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);  
@@ -1352,111 +1443,88 @@ int main(int argc, char **argv) {
         }
         
         
-        
         // activate program
-        ourShader.use(); 
-        
-        
-        // triangle test, week 1
-        //glBindVertexArray(triangleVAO);
-        //week1::DrawCrazyHouse2D(window, ourShader, houseRuntimeInfo); 
-        //glBindVertexArray(0);
+        shaderProgram.use(); 
         
         
         
-        glm::vec3 scale = runtimeInfo.scale;
-        glm::vec3 rotationDegrees = runtimeInfo.rotationDegrees;
-        glm::vec3 movement = runtimeInfo.translation;
+        glm::vec3 manualPosition = runtime_Info.translation;
+        glm::vec3 manualScale = runtime_Info.scale;
+        glm::vec3 manualRotationDegrees = runtime_Info.rotationDegrees;
         
         
         // Pyramid: placed on the left.
-        glm::mat4 pyramidModel_1 = week2::BuildModelMatrix(
-            glm::vec3(-4.0f, 0.0f, 1.0f),
-            glm::vec3(1.0f) * pyramidAuto.scale,
-            glm::vec3(0.0f)
-        );
-        glBindVertexArray(pyramidVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_1, view, projection);
-        week2::RenderPyramid(); 
+        glm::mat4 pyramidModel_1 = AcornMath::BuildModelMatrix(
+            pyramid_1.transform.position,
+            pyramid_1.transform.scale * pyramidAuto.scale,
+            pyramid_1.transform.rotationDegrees);
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_1, view, projection, pyramid_1.overrideColor, pyramid_1.solidColor);        
+        Rendering::DrawMesh(*pyramid_1.mesh);
         
-        glm::mat4 pyramidModel_2 = week2::BuildModelMatrix(
-            glm::vec3(-4.0f, 0.0f, -2.5f),
-            glm::vec3(1.0f) * pyramidAuto.scale,
-            glm::vec3(180.0f, 0.0f, 0.0f)
-        );
-        glBindVertexArray(pyramidVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_2, view, projection, true, Palette::blue);
-        week2::RenderPyramid(); 
+        glm::mat4 pyramidModel_2 = AcornMath::BuildModelMatrix(
+            pyramid_2.transform.position,
+            pyramid_2.transform.scale * pyramidAuto.scale,
+            pyramid_2.transform.rotationDegrees);        
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_2, view, projection, pyramid_2.overrideColor, pyramid_2.solidColor);
+        Rendering::DrawMesh(*pyramid_2.mesh);
         
         
         // manually controlled pyramid
-        glm::mat4 pyramidModel_Manual = week2::BuildModelMatrix(
-            glm::vec3(0.0f, 0.0f, 4.0f) + movement,
-            glm::vec3(1.0f) * scale,
-            glm::vec3(0.0f, 0.0f, 0.0f) + rotationDegrees
+        glm::mat4 pyramidModel_Manual = AcornMath::BuildModelMatrix(
+            pyramid_manual.transform.position + manualPosition,
+            pyramid_manual.transform.scale * manualScale,
+            pyramid_manual.transform.rotationDegrees + manualRotationDegrees
         );
-        glBindVertexArray(pyramidVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, pyramidModel_Manual, view, projection);
-        //week2::RenderPyramid(); 
-        week2::RenderPyramid_FullFaceColors(ourShader); 
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_Manual, view, projection, pyramid_manual.overrideColor, pyramid_manual.solidColor);
+        //Rendering::DrawMesh(*pyramid_manual.mesh);
+        Rendering::DrawMesh_FaceColors(shaderProgram, *pyramid_manual.mesh, Demo::TestColors::pyramid_FaceColors); 
         
         
         // Cube version 1: placed in the middle.
-        glm::mat4 cubeModel_1 = week2::BuildModelMatrix(
-        glm::vec3(0.0f, 0.0f, 1.0f),
-        glm::vec3(1.0f),
-        glm::vec3(0.0f) + cubeAuto.rotationDegrees);
-        glBindVertexArray(cubeVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, cubeModel_1, view, projection);
-        week2::RenderCube(); 
+        glm::mat4 cubeModel_1 = AcornMath::BuildModelMatrix(
+            cube_1.transform.position,
+            cube_1.transform.scale,
+            cube_1.transform.rotationDegrees + cubeAuto.rotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_1, view, projection, cube_1.overrideColor, cube_1.solidColor);
+        Rendering::DrawMesh(*cube_1.mesh);
         
-        glm::mat4 cubeModel_2 = week2::BuildModelMatrix(
-            glm::vec3(0.0f, 0.0f, -2.5f),
-            glm::vec3(1.0f),
-            glm::vec3(0.0f) - cubeAuto.rotationDegrees);
-        glBindVertexArray(cubeVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, cubeModel_2, view, projection, true, Palette::pink);
-        //week2::RenderCube(); 
-        week2::RenderCube_FullFaceColors(ourShader); 
+        
+        glm::mat4 cubeModel_2 = AcornMath::BuildModelMatrix(
+            cube_2.transform.position,
+            cube_2.transform.scale,
+            cube_2.transform.rotationDegrees - cubeAuto.rotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_2, view, projection, cube_2.overrideColor, cube_2.solidColor );
+        //Rendering::DrawMesh(*cube_2.mesh); 
+        Rendering::DrawMesh_FaceColors(shaderProgram, *cube_2.mesh, Demo::TestColors::cube_FaceColors); 
         
         // Cube version 2: placed behind the other cubes.
-        glm::mat4 cube2Model = week2::BuildModelMatrix(
-            glm::vec3(0.0f, 0.0f, -7.0f),
-            glm::vec3(1.0f),
-            glm::vec3(0.0f) + cubeAuto.rotationDegrees
+        glm::mat4 cubeModel_v2 = AcornMath::BuildModelMatrix(
+            cube_V2.transform.position,
+            cube_V2.transform.scale,
+            cube_V2.transform.rotationDegrees + cubeAuto.rotationDegrees
         );
-        glBindVertexArray(cube2VAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, cube2Model, view, projection);
-        week2::RenderCube(); 
-        
-        /*        
-        glBindVertexArray(cube2VAO);
-        week2::UpdateShaderUniforms_OLD(ourShader, 
-            glm::vec3(0.7f, 0.0f, 0.0f), // Position within the visible range
-            glm::vec3(0.3f),                // Smaller cube
-            glm::vec3(0.0f));
-        week2::RenderCube(); 
-        */
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_v2, view, projection, cube_V2.overrideColor, cube_V2.solidColor );
+        Rendering::DrawMesh(*cube_V2.mesh); 
         
         
         // Sphere: placed on the right.
-        glm::mat4 sphereModel_1 = week2::BuildModelMatrix(
-            glm::vec3(3.0f, 0.0f, -1.0f) + sphereAuto.translation,
-            glm::vec3(0.5f),
-            glm::vec3(0.0f)
+        glm::mat4 sphereModel_1 = AcornMath::BuildModelMatrix(
+            sphere_1.transform.position + sphereAuto.translation,
+            sphere_1.transform.scale,
+            sphere_1.transform.rotationDegrees
         );
-        glBindVertexArray(sphereVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, sphereModel_1, view, projection);
-        week2::RenderSphere(sphereIndexCount);
+        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_1, view, projection, sphere_1.overrideColor, sphere_1.solidColor);
+        Rendering::DrawMesh(*sphere_1.mesh);
         
-        glm::mat4 sphereModel_2 = week2::BuildModelMatrix(
-            glm::vec3(4.5f, 0.0f, -2.5f) - sphereAuto.translation,
-            glm::vec3(0.5f),
-            glm::vec3(0.0f)
+        glm::mat4 sphereModel_2 = AcornMath::BuildModelMatrix(
+            sphere_2.transform.position - sphereAuto.translation,
+            sphere_2.transform.scale,
+            sphere_2.transform.rotationDegrees
         );
-        glBindVertexArray(sphereVAO);
-        week2::UpdateShaderUniforms_MATRIX(ourShader, sphereModel_2, view, projection, true, Palette::forestGreen);
-        week2::RenderSphere(sphereIndexCount);
+        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_2, view, projection, sphere_2.overrideColor, sphere_2.solidColor);
+        Rendering::DrawMesh(*sphere_2.mesh);
         
         
         
@@ -1465,31 +1533,13 @@ int main(int argc, char **argv) {
     
     
     
-    // triangle cleanup
-    glDeleteVertexArrays(1, &triangleVAO);
-    glDeleteBuffers(1, &triangleVBO);
+    // Mesh cleanup
+    Rendering::DestroyGpuMesh(pyramidGpu);
+    Rendering::DestroyGpuMesh(cubeGpu);
+    Rendering::DestroyGpuMesh(cubeGpu_v2);
+    Rendering::DestroyGpuMesh(sphereGpu);
     
-    // Pyramid cleanup
-    glDeleteVertexArrays(1, &pyramidVAO);
-    glDeleteBuffers(1, &pyramidVBO);
-    glDeleteBuffers(1, &pyramidEBO);
-    
-    // Cube cleanup 
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteBuffers(1, &cubeVBO);
-    glDeleteBuffers(1, &cubeEBO);
-    
-    // Cube 2 cleanup
-    glDeleteVertexArrays(1, &cube2VAO);
-    glDeleteBuffers(1, &cube2VBO);
-    glDeleteBuffers(1, &cube2EBO);
-    
-    // Sphere cleanup
-    glDeleteVertexArrays(1, &sphereVAO);
-    glDeleteBuffers(1, &sphereVBO);
-    glDeleteBuffers(1, &sphereEBO);
-    
-    glDeleteProgram(ourShader.ID);
+    glDeleteProgram(shaderProgram.ID);
     
     glfwDestroyWindow(window);
     glfwTerminate();

@@ -1,8 +1,10 @@
 
 #version 460 core
 
-in vec3 outColor;
+in vec3 vertexColor;
+
 out vec4 FragColor;
+
 
 uniform bool uColorOverride = false;
 uniform vec3 uSolidColor;
@@ -15,6 +17,6 @@ void main()
     }
     else
     {        
-        FragColor = vec4(outColor, 1.0);
+        FragColor = vec4(vertexColor, 1.0);
     }
 }

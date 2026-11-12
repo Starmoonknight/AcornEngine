@@ -2,11 +2,24 @@
 
 
 #include <glad/glad.h> // include glad to get all the required OpenGL headers
-  
+
+#include <assert.h>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <iostream>
+
+
+struct BasicUniformLocations
+{
+    GLint modelLocation = -1;
+    GLint viewLocation = -1;
+    GLint projectionLocation = -1;
+
+    GLint overrideColorLocation = -1;
+    GLint colorLocation = -1;
+};
+
 
 class ShaderProgram
 {
@@ -57,11 +70,16 @@ public:
         
         
         unsigned int vertex, fragment;
-        int success;
+        int success = 0;
         char infoLog[512];
         
         // Vertex Shader
         vertex = glCreateShader(GL_VERTEX_SHADER);
+        if (vertex == 0)
+        {
+            std::cerr << "[Shader] Failed to create vertex shader.\n";
+            return;
+        }        
         glShaderSource(vertex, 1, &vShaderCode, NULL);
         glCompileShader(vertex);
         // check if compilation was successful 
@@ -78,6 +96,13 @@ public:
         
         // Fragment Shader
         fragment = glCreateShader(GL_FRAGMENT_SHADER);
+        if (fragment == 0)
+        {
+            std::cerr << "[Shader] Failed to create fragment shader.\n";
+
+            glDeleteShader(vertex);
+            return;
+        }
         glShaderSource(fragment, 1, &fShaderCode, NULL);
         glCompileShader(fragment);
         // check if compilation was successful 
@@ -94,6 +119,14 @@ public:
         
         // Shader Program
         ID = glCreateProgram();
+        if (ID == 0)
+        {
+            std::cerr << "[Shader] Failed to create shader program.\n";
+
+            glDeleteShader(vertex);
+            glDeleteShader(fragment);
+            return;
+        }
         glAttachShader(ID, vertex);
         glAttachShader(ID, fragment);
         glLinkProgram(ID);
@@ -117,7 +150,9 @@ public:
         valid = true;
     }
     
-    void use()
+    
+    
+    void use() const
     {
         glUseProgram(ID);
     }
@@ -140,8 +175,43 @@ public:
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
     }
     
+    void CacheBasicUniformLocations()
+    {
+        assert(IsValid());
+
+        basicUniforms.modelLocation =
+            glGetUniformLocation(ID, "uModel");
+
+        basicUniforms.viewLocation =
+            glGetUniformLocation(ID, "uView");
+
+        basicUniforms.projectionLocation =
+            glGetUniformLocation(ID, "uProjection");
+
+        basicUniforms.overrideColorLocation =
+            glGetUniformLocation(ID, "uColorOverride");
+
+        basicUniforms.colorLocation =
+            glGetUniformLocation(ID, "uSolidColor");
+
+        assert(basicUniforms.modelLocation != -1);
+        assert(basicUniforms.viewLocation != -1);
+        assert(basicUniforms.projectionLocation != -1);
+        assert(basicUniforms.overrideColorLocation != -1);
+        assert(basicUniforms.colorLocation != -1);
+    }
+
+    const BasicUniformLocations& GetBasicUniformLocations() const
+    {
+        return basicUniforms;
+    }
+    
+    
+    
 private:
     bool valid = false;
+    BasicUniformLocations basicUniforms{};
+    
     
     // not in use yet, switch the above success checks with this later. 
     bool checkCompileErrors(unsigned int shader, std::string type)
