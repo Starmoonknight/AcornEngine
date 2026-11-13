@@ -7,11 +7,11 @@ layout(location = 2) in vec3 aNormal;
 layout(location = 3) in vec2 aTexCoord;
 
 out vec3 vertexColor;
+out vec2 textCoord; 
 
-
-uniform mat4 uModel;
-uniform mat4 uView; 
-uniform mat4 uProjection; 
+uniform mat4 uModel;    
+uniform mat4 uView;     
+uniform mat4 uProjection;   
 
 void main()
 {
@@ -25,13 +25,17 @@ void main()
     *          )
     *      )
     */
+    // Transform from local space to world space.
     vec4 worldPosition = uModel * localPosition;
     
+    // Transform from world space to camera space.
     vec4 viewPosition = uView * worldPosition;
     
+    // Project into clip space.
     gl_Position = uProjection * viewPosition;
     
     vertexColor = aColor;
+    textCoord = aTexCoord; 
 }
 
 

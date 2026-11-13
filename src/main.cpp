@@ -20,6 +20,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// Third-party libraries - stb 
+#include "stb_image.h"
+
 
 namespace
 {
@@ -257,6 +260,7 @@ namespace AcornData
         "Vertex must support standard-layout member offsets"
     );
     
+    // a set of consecutive indices that makes a full face 
     struct FaceRange
     {
         std::size_t firstIndex = 0;
@@ -921,6 +925,44 @@ namespace Rendering
     
 }
 
+
+namespace Texture
+{
+    GLuint LoadTexture2D(const char* filePath)
+    {
+        int width = 0;
+        int height = 0;
+        int channelsInFile = 0;
+        
+        // using STBI_rgb_alpha instead of 0 would make the returned unsigned char *pixels layout consistently four channels
+        unsigned char *pixels = stbi_load(filePath, &width, &height, &channelsInFile, 0);  
+        
+        if (!pixels)
+        {
+            std::cerr << "Failed to load texture: " << filePath << '\n';
+            return 0;
+        }
+        
+        GLuint textureID = 0;
+        glGenTextures(1, &textureID);  
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        
+        // set the texture wrapping/filtering options (on the currently bound texture object)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+        // load and generate the texture
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        
+        stbi_image_free(pixels);
+
+        return textureID;
+    }
+    
+}
 
 
 

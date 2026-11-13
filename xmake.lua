@@ -44,12 +44,17 @@ target("Acorn")
     add_packages("glad") 
     -- Other files to display in Rider
     add_extrafiles("shaders/**.vert", "shaders/**.frag")
+    add_extrafiles("textures/**.jpg", "textures/**.png")
     
  
 after_build(function (target)
     local shaderdir = path.join(target:targetdir(), "shaders")
     os.mkdir(shaderdir)
     os.cp(path.join(os.projectdir(), "shaders", "*"), shaderdir)
+    
+    local texturedir = path.join(target:targetdir(), "textures")
+    os.mkdir(texturedir)
+    os.cp(path.join(os.projectdir(), "textures", "*"), texturedir)
 end)
 
 --

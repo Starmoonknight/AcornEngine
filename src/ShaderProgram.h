@@ -18,6 +18,11 @@ struct BasicUniformLocations
 
     GLint overrideColorLocation = -1;
     GLint colorLocation = -1;
+    GLint colorAmountLocation = -1;
+    
+    GLint useTextureLocation = -1;
+    GLint textureLocation = -1;
+    GLint textureColorAmountLocation = -1;
 };
 
 
@@ -188,19 +193,39 @@ public:
         basicUniforms.projectionLocation =
             glGetUniformLocation(ID, "uProjection");
 
+        
         basicUniforms.overrideColorLocation =
             glGetUniformLocation(ID, "uColorOverride");
 
         basicUniforms.colorLocation =
             glGetUniformLocation(ID, "uSolidColor");
 
+        basicUniforms.colorAmountLocation =
+            glGetUniformLocation(ID, "uColorAmount");
+        
+        
+        basicUniforms.useTextureLocation =
+            glGetUniformLocation(ID, "uUseTexture");
+        
+        basicUniforms.textureLocation =
+            glGetUniformLocation(ID, "uTexture2D");
+        
+        basicUniforms.textureColorAmountLocation =
+            glGetUniformLocation(ID, "uTextureColorAmount");
+        
+
         assert(basicUniforms.modelLocation != -1);
         assert(basicUniforms.viewLocation != -1);
+        
         assert(basicUniforms.projectionLocation != -1);
         assert(basicUniforms.overrideColorLocation != -1);
         assert(basicUniforms.colorLocation != -1);
+        
+        assert(basicUniforms.useTextureLocation != -1);
+        assert(basicUniforms.textureLocation != -1);
+        assert(basicUniforms.textureColorAmountLocation != -1);
     }
-
+    
     const BasicUniformLocations& GetBasicUniformLocations() const
     {
         return basicUniforms;
