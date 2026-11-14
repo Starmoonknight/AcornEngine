@@ -1578,10 +1578,7 @@ int main(int argc, char **argv) {
         shaderProgram.use(); 
         
         const BasicUniformLocations& uniforms = shaderProgram.GetBasicUniformLocations();
-        glUniform1i(uniforms.textureLocation, 0); // uTexture2D → unit 0        
-        
-        glUniform1i(uniforms.textureLocation2, 1); // uTexture2D_2 → unit 1        
-        
+        glUniform1i(uniforms.textureLocation, 0); // uTexture2D → unit 0
         
         
         
@@ -1645,14 +1642,8 @@ int main(int argc, char **argv) {
             cube_V2.transform.rotationDegrees + cubeAuto.rotationDegrees
         );
         
-        //glActiveTexture(GL_TEXTURE0);                       // Select unit 0.
-        //glBindTexture(GL_TEXTURE_2D, testTexture_crate);     // Put this texture there.
-        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, testTexture_crate);
-        
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, testTexture_face);
+        glActiveTexture(GL_TEXTURE0);                       // Select unit 0.
+        glBindTexture(GL_TEXTURE_2D, testTexture_crate);     // Put this texture there.        
         
         Rendering::SetBasicShaderUniforms(
             shaderProgram, cubeModel_v2, view, projection, 

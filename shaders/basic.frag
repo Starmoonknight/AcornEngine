@@ -15,8 +15,6 @@ uniform bool uUseTexture = false;
 uniform float uTintTextureColorAmount = 0.0f;    // 0 = texture RGB, 1 = chosen color.
 uniform sampler2D uTexture2D;
 
-uniform sampler2D uTexture2D_2;
-
 
 void main()
 {
@@ -47,9 +45,7 @@ void main()
                     + uTintTextureColorAmount * change;
         
         // This should allow using black and white as a tint color
-        //FragColor = vec4(result, textureColor.a);
-        
-        FragColor = mix(vec4(result, textureColor.a), texture(uTexture2D_2, textCoord), 0.3);
+        FragColor = vec4(result, textureColor.a);
     }
     else
     {

@@ -22,7 +22,6 @@ struct BasicUniformLocations
     
     GLint useTextureLocation = -1;
     GLint textureLocation = -1;
-    GLint textureLocation2 = -1;
     GLint tintTextureColorAmountLocation = -1;
 };
 
@@ -211,9 +210,6 @@ public:
         basicUniforms.textureLocation =
             glGetUniformLocation(ID, "uTexture2D");
         
-        basicUniforms.textureLocation2 =
-            glGetUniformLocation(ID, "uTexture2D_2");
-        
         basicUniforms.tintTextureColorAmountLocation =
             glGetUniformLocation(ID, "uTintTextureColorAmount");
         
@@ -227,7 +223,6 @@ public:
         
         assert(basicUniforms.useTextureLocation != -1);
         assert(basicUniforms.textureLocation != -1);
-        assert(basicUniforms.textureLocation2 != -1);
         assert(basicUniforms.tintTextureColorAmountLocation != -1);
     }
     
