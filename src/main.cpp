@@ -299,6 +299,8 @@ namespace AcornData
         
         bool overrideColor = false;
         glm::vec3 solidColor{1.0f};
+        
+        GLuint textureID = 0; // 0 means no texture selected for this object.
     };
     
 }
@@ -410,6 +412,17 @@ namespace  BasicMeshes
         { 15, 3 }  // Back.
         };
         
+        
+        // badly? assign UVs based on each vertex's X and Y position, faces perpendicular to this plane get stretched.
+        for (AcornData::Vertex& vertex : mesh.vertices)
+        {
+            vertex.uv = glm::vec2(
+                vertex.position.x + 0.5f,
+                vertex.position.y + 0.5f
+            );
+        }
+        mesh.hasUVs = true;
+        
         return mesh;
     }
     
@@ -468,10 +481,21 @@ namespace  BasicMeshes
         { 30, 6 }   // Top.
         };
         
+        
+        // badly? assign UVs based on each vertex's X and Y position, faces perpendicular to this plane get stretched.
+        for (AcornData::Vertex& vertex : mesh.vertices)
+        {
+            vertex.uv = glm::vec2(
+                vertex.position.x + 0.5f,
+                vertex.position.y + 0.5f
+            );
+        }
+        mesh.hasUVs = true;
+        
         return mesh; 
     }
     
-    AcornData::MeshData MakeBasicCube_v2()
+    AcornData::MeshData MakeBasicCube_TextureCompat()
     {
         using AcornData::MeshData;  
         
@@ -577,6 +601,24 @@ namespace  BasicMeshes
         { 24, 6 }, // Left.
         { 30, 6 }  // Right.
         };
+        
+        
+        const glm::vec2 faceUVs[4] = {
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f},
+            {0.0f, 1.0f}
+        };
+
+        for (std::size_t face = 0; face < 6; ++face)
+        {
+            for (std::size_t corner = 0; corner < 4; ++corner)
+            {
+                mesh.vertices[face * 4 + corner].uv = faceUVs[corner];
+            }
+        }
+
+        mesh.hasUVs = true;
         
         return mesh; 
     }
@@ -839,26 +881,54 @@ namespace Rendering
         mesh = AcornData::GpuMesh{};
     }
     
+    
+    void SetBasicShaderUniforms_Placement(
+        const BasicUniformLocations& uniforms,
+        const glm::mat4& model,
+        const glm::mat4& view,
+        const glm::mat4& projection)
+    {
+        // updates uniforms on the currently active program using the saved uniform locations 
+        glUniformMatrix4fv(uniforms.modelLocation, 1 ,GL_FALSE,  glm::value_ptr(model));
+        glUniformMatrix4fv(uniforms.viewLocation, 1 ,GL_FALSE,  glm::value_ptr(view));
+        glUniformMatrix4fv(uniforms.projectionLocation, 1 ,GL_FALSE,  glm::value_ptr(projection));
+    }
+    
+    void SetBasicShaderUniforms_Visuals(
+        const BasicUniformLocations& uniforms,
+        bool colorOverride = false,
+        glm::vec3 color = glm::vec3(1.0f),
+        float colorAmount = 1.0,
+        bool useTexture = false,
+        float textureColorAmount = 0.0)
+    {
+        glUniform1i(uniforms.overrideColorLocation, colorOverride);
+        glUniform3fv(uniforms.colorLocation, 1, glm::value_ptr(color)); 
+        glUniform1f(uniforms.colorAmountLocation, colorAmount);
+        
+        glUniform1i(uniforms.useTextureLocation, useTexture);
+        glUniform1f(uniforms.tintTextureColorAmountLocation, textureColorAmount);
+    }
+    
     void SetBasicShaderUniforms(
         const ShaderProgram& shader,
         const glm::mat4& model,
         const glm::mat4& view,
         const glm::mat4& projection,
         bool colorOverride = false,
-        glm::vec3 color = glm::vec3(1.0f))
+        glm::vec3 color = glm::vec3(1.0f),
+        float colorAmount = 1.0f,
+        bool useTexture = false,
+        float textureColorAmount = 0.0f)
     {
         glUseProgram(shader.ID); 
         const BasicUniformLocations& uniforms = shader.GetBasicUniformLocations();
         
-        // updates uniforms on the currently active program using the saved uniform locations 
-        glUniformMatrix4fv(uniforms.modelLocation, 1 ,GL_FALSE,  glm::value_ptr(model));
-        glUniformMatrix4fv(uniforms.viewLocation, 1 ,GL_FALSE,  glm::value_ptr(view));
-        glUniformMatrix4fv(uniforms.projectionLocation, 1 ,GL_FALSE,  glm::value_ptr(projection));
-        
-        glUniform1i(uniforms.overrideColorLocation, colorOverride);
-        glUniform3fv(uniforms.colorLocation, 1, glm::value_ptr(color));  
+        SetBasicShaderUniforms_Placement(uniforms, model, view, projection);
+        SetBasicShaderUniforms_Visuals(uniforms, colorOverride, color, colorAmount, useTexture, textureColorAmount); 
         CheckOpenGLErrors("setting geometry Uniform's");
     }
+    
     
     void DrawMesh(const AcornData::GpuMesh& mesh)
     {
@@ -934,8 +1004,8 @@ namespace Texture
         int height = 0;
         int channelsInFile = 0;
         
-        // using STBI_rgb_alpha instead of 0 would make the returned unsigned char *pixels layout consistently four channels
-        unsigned char *pixels = stbi_load(filePath, &width, &height, &channelsInFile, 0);  
+        // Return four bytes per pixel (RGBA), regardless of the file's channels.  Should work with both .jpg and .png 
+        unsigned char *pixels = stbi_load(filePath, &width, &height, &channelsInFile, STBI_rgb_alpha);  
         
         if (!pixels)
         {
@@ -954,9 +1024,10 @@ namespace Texture
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
         // load and generate the texture
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
         glGenerateMipmap(GL_TEXTURE_2D);
         
+        // releases the CPU-side pixel array returned by stbi_load() after glTexImage2D() has consumed the pixels for the OpenGL texture
         stbi_image_free(pixels);
 
         return textureID;
@@ -1353,14 +1424,32 @@ int main(int argc, char **argv) {
     }
     CheckOpenGLErrors("shader setup");
     
-    // currently needs to be called every time after linking program 
-    shaderProgram.CacheBasicUniformLocations();
+    
+    shaderProgram.CacheBasicUniformLocations();     // currently needs to be called every time after linking program 
+        
+    
+    // loading the testing-texture
+    stbi_set_flip_vertically_on_load(true);     // changes stb's loading setting for subsequent loads
+    
+    GLuint testTexture_crate = Texture::LoadTexture2D("textures/container.jpg"); 
+    if (testTexture_crate == 0)
+    {
+        std::cerr << "[Warning] Failed to load texture: textures/container.jpg\n";
+    }
+    
+    GLuint testTexture_face = Texture::LoadTexture2D("textures/awesomeface.png"); 
+    if (testTexture_face == 0)
+    {
+        std::cerr << "[Warning] Failed to load texture: textures/awesomeface.png\n";
+    }
+    
+    
     
     
     // preparing rendering objects  
     MeshData pyramidData = BasicMeshes::MakeBasicPyramid();
     MeshData cubeData = BasicMeshes::MakeBasicCube();
-    MeshData cube2Data = BasicMeshes::MakeBasicCube_v2();
+    MeshData cube2Data = BasicMeshes::MakeBasicCube_TextureCompat();
     MeshData sphereData = BasicMeshes::MakeBasicSphere();
     
     GpuMesh pyramidGpu = Rendering::CreateGpuMesh(pyramidData);
@@ -1488,6 +1577,12 @@ int main(int argc, char **argv) {
         // activate program
         shaderProgram.use(); 
         
+        const BasicUniformLocations& uniforms = shaderProgram.GetBasicUniformLocations();
+        glUniform1i(uniforms.textureLocation, 0); // uTexture2D → unit 0        
+        
+        glUniform1i(uniforms.textureLocation2, 1); // uTexture2D_2 → unit 1        
+        
+        
         
         
         glm::vec3 manualPosition = runtime_Info.translation;
@@ -1500,14 +1595,14 @@ int main(int argc, char **argv) {
             pyramid_1.transform.position,
             pyramid_1.transform.scale * pyramidAuto.scale,
             pyramid_1.transform.rotationDegrees);
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_1, view, projection, pyramid_1.overrideColor, pyramid_1.solidColor);        
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_1, view, projection, pyramid_1.overrideColor, pyramid_1.solidColor, 1.0f);        
         Rendering::DrawMesh(*pyramid_1.mesh);
         
         glm::mat4 pyramidModel_2 = AcornMath::BuildModelMatrix(
             pyramid_2.transform.position,
             pyramid_2.transform.scale * pyramidAuto.scale,
             pyramid_2.transform.rotationDegrees);        
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_2, view, projection, pyramid_2.overrideColor, pyramid_2.solidColor);
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_2, view, projection, pyramid_2.overrideColor, pyramid_2.solidColor, 1.0f);
         Rendering::DrawMesh(*pyramid_2.mesh);
         
         
@@ -1517,7 +1612,7 @@ int main(int argc, char **argv) {
             pyramid_manual.transform.scale * manualScale,
             pyramid_manual.transform.rotationDegrees + manualRotationDegrees
         );
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_Manual, view, projection, pyramid_manual.overrideColor, pyramid_manual.solidColor);
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_Manual, view, projection, pyramid_manual.overrideColor, pyramid_manual.solidColor, 1.0f);
         //Rendering::DrawMesh(*pyramid_manual.mesh);
         Rendering::DrawMesh_FaceColors(shaderProgram, *pyramid_manual.mesh, Demo::TestColors::pyramid_FaceColors); 
         
@@ -1528,7 +1623,7 @@ int main(int argc, char **argv) {
             cube_1.transform.scale,
             cube_1.transform.rotationDegrees + cubeAuto.rotationDegrees
         );
-        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_1, view, projection, cube_1.overrideColor, cube_1.solidColor);
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_1, view, projection, cube_1.overrideColor, cube_1.solidColor, 1.0f);
         Rendering::DrawMesh(*cube_1.mesh);
         
         
@@ -1537,18 +1632,34 @@ int main(int argc, char **argv) {
             cube_2.transform.scale,
             cube_2.transform.rotationDegrees - cubeAuto.rotationDegrees
         );
-        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_2, view, projection, cube_2.overrideColor, cube_2.solidColor );
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_2, view, projection, cube_2.overrideColor, cube_2.solidColor, 1.0f);
         //Rendering::DrawMesh(*cube_2.mesh); 
         Rendering::DrawMesh_FaceColors(shaderProgram, *cube_2.mesh, Demo::TestColors::cube_FaceColors); 
         
-        // Cube version 2: placed behind the other cubes.
+        
+        
+        // Cube version 2: placed behind the other cubes.  Testing textures 
         glm::mat4 cubeModel_v2 = AcornMath::BuildModelMatrix(
             cube_V2.transform.position,
             cube_V2.transform.scale,
             cube_V2.transform.rotationDegrees + cubeAuto.rotationDegrees
         );
-        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_v2, view, projection, cube_V2.overrideColor, cube_V2.solidColor );
+        
+        //glActiveTexture(GL_TEXTURE0);                       // Select unit 0.
+        //glBindTexture(GL_TEXTURE_2D, testTexture_crate);     // Put this texture there.
+        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, testTexture_crate);
+        
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, testTexture_face);
+        
+        Rendering::SetBasicShaderUniforms(
+            shaderProgram, cubeModel_v2, view, projection, 
+            cube_V2.overrideColor, cube_V2.solidColor, 1.0f, testTexture_crate != 0, 1.0f
+        );
         Rendering::DrawMesh(*cube_V2.mesh); 
+        
         
         
         // Sphere: placed on the right.
@@ -1557,7 +1668,7 @@ int main(int argc, char **argv) {
             sphere_1.transform.scale,
             sphere_1.transform.rotationDegrees
         );
-        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_1, view, projection, sphere_1.overrideColor, sphere_1.solidColor);
+        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_1, view, projection, sphere_1.overrideColor, sphere_1.solidColor, 1.0f);
         Rendering::DrawMesh(*sphere_1.mesh);
         
         glm::mat4 sphereModel_2 = AcornMath::BuildModelMatrix(
@@ -1565,7 +1676,7 @@ int main(int argc, char **argv) {
             sphere_2.transform.scale,
             sphere_2.transform.rotationDegrees
         );
-        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_2, view, projection, sphere_2.overrideColor, sphere_2.solidColor);
+        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_2, view, projection, sphere_2.overrideColor, sphere_2.solidColor, 1.0f);
         Rendering::DrawMesh(*sphere_2.mesh);
         
         

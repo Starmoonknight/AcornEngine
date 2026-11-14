@@ -9,11 +9,13 @@ out vec4 FragColor;
 
 uniform bool uColorOverride = false;
 uniform vec3 uSolidColor = vec3(1.0);       
-uniform float uColorAmount = 1.0;           // 0 = vertex color, 1 = solid color.
+uniform float uColorAmount = 1.0f;           // 0 = vertex color, 1 = solid color.
 
 uniform bool uUseTexture = false;
+uniform float uTintTextureColorAmount = 0.0f;    // 0 = texture RGB, 1 = chosen color.
 uniform sampler2D uTexture2D;
-uniform float uTextureColorAmount = 0.0;    // 0 = texture RGB, 1 = chosen color.
+
+uniform sampler2D uTexture2D_2;
 
 
 void main()
@@ -32,11 +34,22 @@ void main()
         // Sample the texture at the interpolated UV coordinates.
         vec4 textureColor = texture(uTexture2D, textCoord);
 
-        // Blend texture RGB toward the chosen color; preserve texture alpha.
-        FragColor = vec4(
-                mix(textureColor.rgb, chosenColor, uTextureColorAmount), 
-                textureColor.a
-        ); 
+        // Black darkens, white brightens, and 0.5 leaves the image unchanged.
+        // Converts the chosen colour's 0–1 range into a direction from -1 to +1:   -1 = darken, and +1 = brighten
+        vec3 tintDirection = 2.0 * chosenColor - vec3(1.0);
+
+        // Reduce changes near fully black and fully white image pixels.
+        vec3 change = tintDirection 
+                    * textureColor.rgb 
+                    * (vec3(1.0) - textureColor.rgb);
+
+        vec3 result = textureColor.rgb 
+                    + uTintTextureColorAmount * change;
+        
+        // This should allow using black and white as a tint color
+        //FragColor = vec4(result, textureColor.a);
+        
+        FragColor = mix(vec4(result, textureColor.a), texture(uTexture2D_2, textCoord), 0.3);
     }
     else
     {
