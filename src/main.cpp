@@ -5,10 +5,12 @@
 #include <cassert>          // assert
 #include <type_traits>      // std::is_standard_layout
 #include <limits>           // std::numeric_limits
+#include <utility>
 #include <cmath>
 #include <vector>
 #include <cstddef>
 #include <iostream>
+#include <filesystem>
 
 // Third-party libraries - OpenGL
 #include <glad/glad.h>                  // glad include should be before GLFW include 
@@ -23,6 +25,12 @@
 // Third-party libraries - stb 
 #include "stb_image.h"
 
+// Third-party libraries - assimp 
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+
+
 
 namespace
 {
@@ -31,6 +39,9 @@ namespace
     
     constexpr float nearPlane = 0.1f;
     constexpr float farPlane = 100.0f;
+    
+    constexpr glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+    
     
     
     // gets GLFW errors, automatic
@@ -222,6 +233,7 @@ namespace Palette
     const glm::vec3 red         {1.0f,  0.0f,  0.0f};
     const glm::vec3 magenta     {1.0f,  0.0f,  1.0f};
     const glm::vec3 pink        {1.0f,  0.75f, 0.8f};
+    const glm::vec3 coral       {1.0f,  0.5f,  0.31f};   
     const glm::vec3 orange      {1.0f,  0.5f,  0.0f};
     const glm::vec3 yellow      {1.0f,  1.0f,  0.0f};
 
@@ -260,6 +272,18 @@ namespace AcornData
         "Vertex must support standard-layout member offsets"
     );
     
+    enum TextureType
+    {
+        Diffuse,
+        Specular,
+        Normal,
+    };
+    
+    struct Texture {
+        GLuint id = 0;
+        TextureType type;   // type e.g. a diffuse or specular texture. 
+    };  
+    
     // a set of consecutive indices that makes a full face 
     struct FaceRange
     {
@@ -272,7 +296,9 @@ namespace AcornData
     {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices; 
-        std::vector<glm::vec3> colors;          // Empty when this mesh has no per-vertex colors.
+        
+        //std::vector<Texture> textures;    // in MeshData or in GpuMesh? 
+        std::vector<glm::vec3> colors;          // Empty when this mesh has no per-vertex hard coded colors.
         
         std::vector<FaceRange> faces;        
         
@@ -291,6 +317,7 @@ namespace AcornData
         GLsizei index_count = 0;
         std::vector<FaceRange> faces;
     };
+    
     
     struct RenderObject
     {        
@@ -372,7 +399,7 @@ namespace AcornMath
 
 namespace  BasicMeshes
 {
-    AcornData::MeshData MakeBasicPyramid()
+    AcornData::MeshData MakePyramid_Basic()
     {
         using AcornData::MeshData;   
         
@@ -381,9 +408,9 @@ namespace  BasicMeshes
         mesh.vertices = {
             { glm::vec3( 0.5f, -0.5f, -0.5f) }, // 0, bottom, back right 
             { glm::vec3(-0.5f, -0.5f, -0.5f) }, // 1, bottom, back left 
-            { glm::vec3(-0.5f, -0.5f,  0.5f) }, // 2, bottom, forward left 
-            { glm::vec3( 0.5f, -0.5f,  0.5f) }, // 3, bottom, forward right
-            { glm::vec3( 0.0f,  0.5f,  0.0f) }  // 4, up, middle
+            { glm::vec3(-0.5f, -0.5f,  0.5f) }, // 2, bottom, front left 
+            { glm::vec3( 0.5f, -0.5f,  0.5f) }, // 3, bottom, front right
+            { glm::vec3( 0.0f,  0.5f,  0.0f) }  // 4, top, middle
         };
         
         mesh.colors = {
@@ -426,7 +453,142 @@ namespace  BasicMeshes
         return mesh;
     }
     
-    AcornData::MeshData MakeBasicCube()
+    
+    AcornData::MeshData MakeDefaultPyramid()
+    {
+        using AcornData::MeshData;
+
+        MeshData mesh;
+        
+        // 1. Positions, grouped by face.
+        mesh.vertices = {
+            // Bottom: vertices 0-3
+            { glm::vec3( 0.5f, -0.5f, -0.5f) }, // 0: Back right
+            { glm::vec3( 0.5f, -0.5f,  0.5f) }, // 1: Front right
+            { glm::vec3(-0.5f, -0.5f,  0.5f) }, // 2: Front left
+            { glm::vec3(-0.5f, -0.5f, -0.5f) }, // 3: Back left
+
+            // Right: vertices 4-6
+            { glm::vec3( 0.5f, -0.5f, -0.5f) }, // 4: Back right
+            { glm::vec3( 0.0f,  0.5f,  0.0f) }, // 5: Tip
+            { glm::vec3( 0.5f, -0.5f,  0.5f) }, // 6: Front right
+
+            // Front: vertices 7-9
+            { glm::vec3( 0.5f, -0.5f,  0.5f) }, // 7: Front right
+            { glm::vec3( 0.0f,  0.5f,  0.0f) }, // 8: Tip
+            { glm::vec3(-0.5f, -0.5f,  0.5f) }, // 9: Front left
+
+            // Left: vertices 10-12
+            { glm::vec3(-0.5f, -0.5f,  0.5f) }, // 10: Front left
+            { glm::vec3( 0.0f,  0.5f,  0.0f) }, // 11: Tip
+            { glm::vec3(-0.5f, -0.5f, -0.5f) }, // 12: Back left
+
+            // Back: vertices 13-15
+            { glm::vec3(-0.5f, -0.5f, -0.5f) }, // 13: Back left
+            { glm::vec3( 0.0f,  0.5f,  0.0f) }, // 14: Tip
+            { glm::vec3( 0.5f, -0.5f, -0.5f) }  // 15: Back right
+        };
+        
+        // 2. One color per vertex.
+        mesh.colors = {
+            // Bottom: vertices 0-3
+                { Palette::orange },    // 0: Back right
+                { Palette::red },       // 1: Front right
+                { Palette::pink },      // 2: Front left
+                { Palette::green },     // 3: Back left
+
+                // Right: vertices 4-6
+                { Palette::orange },    // 4: Back right
+                { Palette::blue },      // 5: Tip
+                { Palette::red },       // 6: Front right
+
+                // Front: vertices 7-9
+                { Palette::red },       // 7: Front right
+                { Palette::blue },      // 8: Tip
+                { Palette::pink },      // 9: Front left
+
+                // Left: vertices 10-12
+                { Palette::pink },      // 10: Front left
+                { Palette::blue },      // 11: Tip
+                { Palette::green },     // 12: Back left
+
+                // Back: vertices 13-15
+                { Palette::green },     // 13: Back left
+                { Palette::blue },      // 14: Tip
+                { Palette::orange }     // 15: Back right
+        };
+        
+        
+        // 3. Indices, grouped into triangles.
+        mesh.indices = {
+             0,  1,  2,   2,  3,  0, // Bottom: two triangles
+             4,  5,  6,              // Right
+             7,  8,  9,              // Front
+            10, 11, 12,              // Left
+            13, 14, 15               // Back
+        };
+
+        // 4. Where each face starts in mesh.indices, and how many indices it uses.
+        mesh.faces = {
+            { 0, 6 }, // Bottom
+            { 6, 3 }, // Right
+            { 9, 3 }, // Front
+            {12, 3 }, // Left
+            {15, 3 }  // Back
+        };
+
+        // 5. One normal per face, in the same face order.
+        const glm::vec3 faceNormals[5] = {
+            { 0.0f,       -1.0f,        0.0f      }, // Bottom: down
+            { 0.8944272f,  0.4472136f,  0.0f      }, // Right: +X and up
+            { 0.0f,        0.4472136f,  0.8944272f}, // Front: +Z and up
+            {-0.8944272f,  0.4472136f,  0.0f      }, // Left: -X and up
+            { 0.0f,        0.4472136f, -0.8944272f}  // Back: -Z and up
+        };
+
+        // 6. UVs for the square bottom and the triangular sides.
+        const glm::vec2 bottomUVs[4] = {
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f},
+            {0.0f, 1.0f}
+        };
+
+        const glm::vec2 sideUVs[3] = {
+            {0.0f, 0.0f}, // First corner on the base edge
+            {0.5f, 1.0f}, // Tip
+            {1.0f, 0.0f}  // Last corner on the base edge
+        };
+
+        // 7. Assign UVs and normals to the four bottom vertices.
+        for (std::size_t corner = 0; corner < 4; ++corner)
+        {
+            auto& vertex = mesh.vertices[corner];
+            vertex.uv = bottomUVs[corner];
+            vertex.normal = faceNormals[0];
+        }
+        
+        // 8. Assign UVs and normals to the three vertices of each side.
+        const std::size_t firstSideVertex[4] = {4, 7, 10, 13};
+
+        for (std::size_t side = 0; side < 4; ++side)
+        {
+            for (std::size_t corner = 0; corner < 3; ++corner)
+            {
+                auto& vertex = mesh.vertices[firstSideVertex[side] + corner];
+                vertex.uv = sideUVs[corner];
+                vertex.normal = faceNormals[side + 1];
+            }
+        }
+
+        mesh.hasUVs = true;
+        mesh.hasNormals = true;
+
+        return mesh;
+    }
+    
+    
+    AcornData::MeshData MakeCube_Basic()
     {
         using AcornData::MeshData;  
         
@@ -495,7 +657,8 @@ namespace  BasicMeshes
         return mesh; 
     }
     
-    AcornData::MeshData MakeBasicCube_TextureCompat()
+    
+    AcornData::MeshData MakeDefaultCube()
     {
         using AcornData::MeshData;  
         
@@ -539,6 +702,7 @@ namespace  BasicMeshes
             { glm::vec3(0.5f, -0.5f,  0.5f)},
         };
         
+        // One color per vertex.
         mesh.colors = {
             // front face
             glm::vec3(1.0f, 0.0f, 0.0f),
@@ -593,6 +757,7 @@ namespace  BasicMeshes
            20, 21, 22,  22, 23, 20
         };
         
+        // Where each face starts in mesh.indices, and how many indices it uses.
         mesh.faces = {
         {  0, 6 }, // Front.
         {  6, 6 }, // Back.
@@ -600,6 +765,16 @@ namespace  BasicMeshes
         { 18, 6 }, // Top.
         { 24, 6 }, // Left.
         { 30, 6 }  // Right.
+        };
+        
+        // One normal per face, in the same face order. 
+        const glm::vec3 faceNormals[6] = {
+            { 0.0f,  0.0f,  1.0f}, // Front
+            { 0.0f,  0.0f, -1.0f}, // Back
+            { 0.0f, -1.0f,  0.0f}, // Bottom
+            { 0.0f,  1.0f,  0.0f}, // Top
+            {-1.0f,  0.0f,  0.0f}, // Left
+            { 1.0f,  0.0f,  0.0f}  // Right
         };
         
         
@@ -614,11 +789,14 @@ namespace  BasicMeshes
         {
             for (std::size_t corner = 0; corner < 4; ++corner)
             {
-                mesh.vertices[face * 4 + corner].uv = faceUVs[corner];
+                auto& vertex = mesh.vertices[face * 4 + corner];
+                vertex.uv = faceUVs[corner];
+                vertex.normal = faceNormals[face];
             }
         }
 
         mesh.hasUVs = true;
+        mesh.hasNormals = true;
         
         return mesh; 
     }
@@ -757,7 +935,7 @@ namespace Rendering
     {
         using AcornData::Vertex;
         using AcornData::GpuMesh;
-        // Colours are absent, or there is one colour per vertex.
+        // Colors are absent, or there is one color per vertex.
         assert(mesh.colors.empty() || mesh.colors.size() == mesh.vertices.size());
         
         // Triangle indices come in groups of three.
@@ -800,9 +978,25 @@ namespace Rendering
         if (mesh.hasNormals)
         {
             glVertexAttribPointer(
-                2, 3, GL_FLOAT, GL_FALSE, 
+                1, 3, GL_FLOAT, GL_FALSE, 
                 static_cast<GLsizei>(sizeof(Vertex)), 
                 reinterpret_cast<const void*>(offsetof(Vertex, normal))
+            );
+            
+            glEnableVertexAttribArray(1);
+        }
+        else
+        {
+            glDisableVertexAttribArray(1);
+        }
+        
+        // uv,              in attribute slot 3
+        if (mesh.hasUVs)
+        {
+            glVertexAttribPointer(
+                2, 2, GL_FLOAT, GL_FALSE,
+                static_cast<GLsizei>(sizeof(Vertex)),
+                reinterpret_cast<const void*>(offsetof(Vertex, uv))
             );
             
             glEnableVertexAttribArray(2);
@@ -810,22 +1004,6 @@ namespace Rendering
         else
         {
             glDisableVertexAttribArray(2);
-        }
-        
-        // uv,              in attribute slot 3
-        if (mesh.hasUVs)
-        {
-            glVertexAttribPointer(
-                3, 2, GL_FLOAT, GL_FALSE,
-                static_cast<GLsizei>(sizeof(Vertex)),
-                reinterpret_cast<const void*>(offsetof(Vertex, uv))
-            );
-            
-            glEnableVertexAttribArray(3);
-        }
-        else
-        {
-            glDisableVertexAttribArray(3);
         }
         CheckOpenGLErrors("geometry buffer and attribute setup");
         
@@ -842,15 +1020,15 @@ namespace Rendering
             
             // color attribute
             glVertexAttribPointer(
-                1, 3, GL_FLOAT, GL_FALSE, 
+                3, 3, GL_FLOAT, GL_FALSE, 
                 static_cast<GLsizei>(sizeof(glm::vec3)), 
                 nullptr
             );
-            glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(3);
         }
         else
         {
-            glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(3);
         }
         CheckOpenGLErrors("color buffer and attribute setup");
         
@@ -900,14 +1078,14 @@ namespace Rendering
         glm::vec3 color = glm::vec3(1.0f),
         float colorAmount = 1.0,
         bool useTexture = false,
-        float textureColorAmount = 0.0)
+        float textureColorTintAmount = 0.0)
     {
         glUniform1i(uniforms.overrideColorLocation, colorOverride);
         glUniform3fv(uniforms.colorLocation, 1, glm::value_ptr(color)); 
         glUniform1f(uniforms.colorAmountLocation, colorAmount);
         
         glUniform1i(uniforms.useTextureLocation, useTexture);
-        glUniform1f(uniforms.tintTextureColorAmountLocation, textureColorAmount);
+        glUniform1f(uniforms.tintTextureColorAmountLocation, textureColorTintAmount);
     }
     
     void SetBasicShaderUniforms(
@@ -919,13 +1097,13 @@ namespace Rendering
         glm::vec3 color = glm::vec3(1.0f),
         float colorAmount = 1.0f,
         bool useTexture = false,
-        float textureColorAmount = 0.0f)
+        float textureColorTintAmount = 0.0f)
     {
         glUseProgram(shader.ID); 
         const BasicUniformLocations& uniforms = shader.GetBasicUniformLocations();
         
         SetBasicShaderUniforms_Placement(uniforms, model, view, projection);
-        SetBasicShaderUniforms_Visuals(uniforms, colorOverride, color, colorAmount, useTexture, textureColorAmount); 
+        SetBasicShaderUniforms_Visuals(uniforms, colorOverride, color, colorAmount, useTexture, textureColorTintAmount); 
         CheckOpenGLErrors("setting geometry Uniform's");
     }
     
@@ -1035,6 +1213,112 @@ namespace Texture
     
 }
 
+
+
+namespace OBJ_Loader_Assimp
+{
+    struct ImportedPart
+    {
+        AcornData::GpuMesh gpuMesh;
+        bool hasNormals;
+        bool hasUVs;
+    };
+    
+    
+    AcornData::MeshData ConvertMesh(const aiMesh& source)
+    {
+        AcornData::MeshData mesh;
+        mesh.hasNormals = source.HasNormals();
+        mesh.hasUVs = source.HasTextureCoords(0);
+
+        mesh.vertices.reserve(source.mNumVertices);
+        
+        
+        for (unsigned int i = 0; i < source.mNumVertices; ++i)
+        {
+            AcornData::Vertex vertex{};
+            
+            // positions
+            const auto& position = source.mVertices[i];
+            vertex.position = glm::vec3(position.x, position.y, position.z);
+            // normals
+            if (mesh.hasNormals)
+            {
+                const auto& normal = source.mNormals[i];
+                vertex.normal = glm::vec3(normal.x, normal.y, normal.z);
+            }
+            // texture coordinates
+            if (mesh.hasUVs)
+            {
+                const auto& uv = source.mTextureCoords[0][i];
+                vertex.uv = glm::vec2(uv.x, uv.y);
+            }
+            
+            mesh.vertices.push_back(vertex); 
+        }
+        
+        for(unsigned int i = 0; i < source.mNumFaces; ++i)
+        {
+            const aiFace& face = source.mFaces[i];
+            
+            // should only accept triangles here, no lines or point  
+            if (face.mNumIndices != 3)
+            {
+                continue;
+            }
+            
+            // retrieve all indices of the face and store them in the indices vector
+            for(unsigned int j = 0; j < face.mNumIndices; j++)
+            {                
+                mesh.indices.push_back(face.mIndices[j]);        
+            }
+        }
+        
+        return mesh; 
+    }
+    
+    
+    std::vector<AcornData::MeshData> LoadModel(const char* filePath)
+    {
+        Assimp::Importer importer;
+        const aiScene *scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_FlipUVs);	
+        
+        if (scene == nullptr || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE))
+        {
+            std::cerr << "[ERROR::ASSIMP] Could not import " << filePath << ": " 
+                      << importer.GetErrorString() << std::endl;
+            return {};
+        }
+        
+        std::vector<AcornData::MeshData> meshes;
+        
+        for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+        {
+            AcornData::MeshData mesh = ConvertMesh(*scene->mMeshes[i]);
+
+            if (!mesh.indices.empty())
+            {
+                meshes.push_back(std::move(mesh));
+            }
+        }
+        
+        if (meshes.empty())
+        {
+            std::cerr << "No triangle meshes found in " << filePath << '\n';
+        }
+
+        return meshes;        
+    }
+    
+    
+}
+
+
+
+namespace OBJ_Loader
+{
+    
+}
 
 
 
@@ -1378,7 +1662,262 @@ namespace Demo
     }
     
     
+    struct TestingDefaultShapes 
+    {
+        using Transform = AcornData::Transform;
+        using MeshData = AcornData::MeshData;
+        using GpuMesh = AcornData::GpuMesh;
+        using RenderObject = AcornData::RenderObject;
+        
+        
+        // controlled by keyboard toggles.
+        Demo::GeometryRuntimeValues_Inputs runtime_Inputs{}; 
+        Demo::GeometryRuntimeValues_Transforms runtime_Info{};
+        // Automatic animations.
+        Demo::GeometryRuntimeValues_Transforms cubeAuto{};
+        Demo::GeometryRuntimeValues_Transforms sphereAuto{};
+        Demo::GeometryRuntimeValues_Transforms pyramidAuto{};
+        
+        TestingDefaultShapes()
+        {
+            cubeAuto.bRotateY = true;
+            sphereAuto.bTranslateZ = true;
+            pyramidAuto.bScaleY = true;
+        }
+        
+        // preparing rendering objects  
+        MeshData pyramidData = BasicMeshes::MakePyramid_Basic();
+        MeshData cubeData = BasicMeshes::MakeCube_Basic();
+        MeshData sphereData = BasicMeshes::MakeBasicSphere();
+        
+        MeshData pyramidData_v2 = BasicMeshes::MakeDefaultPyramid();
+        MeshData cubeData_v2 = BasicMeshes::MakeDefaultCube();
+        
+        
+        GpuMesh pyramidGpu = Rendering::CreateGpuMesh(pyramidData);
+        GpuMesh cubeGpu = Rendering::CreateGpuMesh(cubeData);
+        GpuMesh sphereGpu = Rendering::CreateGpuMesh(sphereData);
+        
+        GpuMesh pyramidGp_v2 = Rendering::CreateGpuMesh(pyramidData_v2);
+        GpuMesh cubeGpu_v2 = Rendering::CreateGpuMesh(cubeData_v2);
+    
+    
+        // making object instances
+        RenderObject basicPyramid_1{&pyramidGpu, Transform{glm::vec3(-4.0f, 0.0f, 1.0f)}};
+        RenderObject basicPyramid_2{&pyramidGpu, Transform{glm::vec3(-4.0f, 0.0f, -2.5f), glm::vec3(180.0f, 0.0f, 0.0f)}, true, Palette::blue};
+        
+        RenderObject pyramid_V1{&pyramidGp_v2, Transform{glm::vec3(-4.0f, 0.0f, -6.0f)}};
+        RenderObject pyramid_manual{&pyramidGp_v2, Transform{glm::vec3(0.0f, 0.0f, 4.0f)}};
+    
+        
+        RenderObject basicCube_1{&cubeGpu, Transform{glm::vec3(0.0f, 0.0f, 1.0f)}};
+        RenderObject basicCube_2{&cubeGpu, Transform{glm::vec3(0.0f, 0.0f, -2.5f)}, true, Palette::pink};
+        
+        RenderObject cube_V2{&cubeGpu_v2, Transform{glm::vec3(0.0f, 0.0f, -7.0f)}};
+        
+        
+        RenderObject sphere_1{&sphereGpu, Transform{glm::vec3(3.0f, 0.0f, -1.0f)}};
+        RenderObject sphere_2{&sphereGpu, Transform{glm::vec3(4.5f, 0.0f, -2.5f)}, true, Palette::forestGreen};
+    };
+    
+    
+    void Update_TestingDefaultShapes(
+        GLFWwindow* window, const ShaderProgram& shaderProgram, TestingDefaultShapes& basicShapes,
+        float deltaTime, const glm::mat4& view, const glm::mat4& projection, 
+        GLuint testTexture_crate)
+    {
+        
+        HandleRuntimeInputs(window, basicShapes.runtime_Inputs, basicShapes.runtime_Info);
+
+        UpdateTransforms(basicShapes.runtime_Info, deltaTime);
+        UpdateTransforms(basicShapes.cubeAuto, deltaTime);
+        UpdateTransforms(basicShapes.sphereAuto, deltaTime);
+        UpdateTransforms(basicShapes.pyramidAuto, deltaTime);
+        
+        
+        // activate program
+        shaderProgram.use(); 
+        
+        const BasicUniformLocations& uniforms = shaderProgram.GetBasicUniformLocations();
+        glUniform1i(uniforms.textureLocation, 0); // uTexture2D → unit 0
+        
+        
+        
+        glm::vec3 manualPosition = basicShapes.runtime_Info.translation;
+        glm::vec3 manualScale = basicShapes.runtime_Info.scale;
+        glm::vec3 manualRotationDegrees = basicShapes.runtime_Info.rotationDegrees;
+        
+        
+        // Pyramid: placed on the left.
+        glm::mat4 pyramidModel_1 = AcornMath::BuildModelMatrix(
+            basicShapes.basicPyramid_1.transform.position,
+            basicShapes.basicPyramid_1.transform.scale * basicShapes.pyramidAuto.scale,
+            basicShapes.basicPyramid_1.transform.rotationDegrees);
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_1, view, projection, basicShapes.basicPyramid_1.overrideColor, basicShapes.basicPyramid_1.solidColor, 1.0f);        
+        Rendering::DrawMesh(*basicShapes.basicPyramid_1.mesh);
+        
+        glm::mat4 pyramidModel_2 = AcornMath::BuildModelMatrix(
+            basicShapes.basicPyramid_2.transform.position,
+            basicShapes.basicPyramid_2.transform.scale * basicShapes.pyramidAuto.scale,
+            basicShapes.basicPyramid_2.transform.rotationDegrees);        
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_2, view, projection, basicShapes.basicPyramid_2.overrideColor, basicShapes.basicPyramid_2.solidColor, 1.0f);
+        Rendering::DrawMesh(*basicShapes.basicPyramid_2.mesh);
+        
+        
+        glm::mat4 pyramidModel_v2 = AcornMath::BuildModelMatrix(
+            basicShapes.pyramid_V1.transform.position,
+            basicShapes.pyramid_V1.transform.scale * basicShapes.pyramidAuto.scale,
+            basicShapes.pyramid_V1.transform.rotationDegrees);
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_v2, view, projection, basicShapes.pyramid_V1.overrideColor, basicShapes.pyramid_V1.solidColor, 1.0f);        
+        shaderProgram.SetBool("uUseLighting", true);
+        Rendering::DrawMesh(*basicShapes.pyramid_V1.mesh);
+        
+        
+        // manually controlled pyramid
+        glm::mat4 pyramidModel_Manual = AcornMath::BuildModelMatrix(
+            basicShapes.pyramid_manual.transform.position + manualPosition,
+            basicShapes.pyramid_manual.transform.scale * manualScale,
+            basicShapes.pyramid_manual.transform.rotationDegrees + manualRotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_Manual, view, projection, basicShapes.pyramid_manual.overrideColor, basicShapes.pyramid_manual.solidColor, 1.0f);
+        //Rendering::DrawMesh(*pyramid_manual.mesh);
+        Rendering::DrawMesh_FaceColors(shaderProgram, *basicShapes.pyramid_manual.mesh, Demo::TestColors::pyramid_FaceColors); 
+        shaderProgram.SetBool("uUseLighting", false);
+        
+        
+        
+        // Cube version 1: placed in the middle.
+        glm::mat4 cubeModel_1 = AcornMath::BuildModelMatrix(
+            basicShapes.basicCube_1.transform.position,
+            basicShapes.basicCube_1.transform.scale,
+            basicShapes.basicCube_1.transform.rotationDegrees + basicShapes.cubeAuto.rotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_1, view, projection, basicShapes.basicCube_1.overrideColor, basicShapes.basicCube_1.solidColor, 1.0f);
+        Rendering::DrawMesh(*basicShapes.basicCube_1.mesh);
+        
+        
+        glm::mat4 cubeModel_2 = AcornMath::BuildModelMatrix(
+            basicShapes.basicCube_2.transform.position,
+            basicShapes.basicCube_2.transform.scale,
+            basicShapes.basicCube_2.transform.rotationDegrees - basicShapes.cubeAuto.rotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_2, view, projection, basicShapes.basicCube_2.overrideColor, basicShapes.basicCube_2.solidColor, 1.0f);
+        //Rendering::DrawMesh(*cube_2.mesh); 
+        Rendering::DrawMesh_FaceColors(shaderProgram, *basicShapes.basicCube_2.mesh, Demo::TestColors::cube_FaceColors); 
+        
+        
+        
+        // Cube version 2: placed behind the other cubes.  Testing textures 
+        glm::mat4 cubeModel_v2 = AcornMath::BuildModelMatrix(
+            basicShapes.cube_V2.transform.position,
+            basicShapes.cube_V2.transform.scale,
+            basicShapes.cube_V2.transform.rotationDegrees + basicShapes.cubeAuto.rotationDegrees
+        );
+        
+        glActiveTexture(GL_TEXTURE0);                       // Select unit 0.
+        glBindTexture(GL_TEXTURE_2D, testTexture_crate);     // Put this texture there.        
+        
+        Rendering::SetBasicShaderUniforms(
+            shaderProgram, cubeModel_v2, view, projection, 
+            basicShapes.cube_V2.overrideColor, basicShapes.cube_V2.solidColor, 1.0f, testTexture_crate != 0, 1.0f
+        );
+        shaderProgram.SetBool("uUseLighting", true);
+        Rendering::DrawMesh(*basicShapes.cube_V2.mesh); 
+        shaderProgram.SetBool("uUseLighting", false);
+        
+        
+        
+        // Sphere: placed on the right.
+        glm::mat4 sphereModel_1 = AcornMath::BuildModelMatrix(
+            basicShapes.sphere_1.transform.position + basicShapes.sphereAuto.translation,
+            basicShapes.sphere_1.transform.scale,
+            basicShapes.sphere_1.transform.rotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_1, view, projection, basicShapes.sphere_1.overrideColor, basicShapes.sphere_1.solidColor, 1.0f);
+        Rendering::DrawMesh(*basicShapes.sphere_1.mesh);
+        
+        glm::mat4 sphereModel_2 = AcornMath::BuildModelMatrix(
+            basicShapes.sphere_2.transform.position - basicShapes.sphereAuto.translation,
+            basicShapes.sphere_2.transform.scale,
+            basicShapes.sphere_2.transform.rotationDegrees
+        );
+        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_2, view, projection, basicShapes.sphere_2.overrideColor, basicShapes.sphere_2.solidColor, 1.0f);
+        Rendering::DrawMesh(*basicShapes.sphere_2.mesh);
+    }
+    
+    
+    glm::vec3 SpinTheSun(float deltaTime, float& sunAngleDegrees)
+    {
+        constexpr float sunSpeedDegreesPerSecond = 65.0f;
+
+        sunAngleDegrees += sunSpeedDegreesPerSecond * deltaTime;
+        sunAngleDegrees = std::fmod(sunAngleDegrees, 360.0f);
+
+        const glm::mat4 sunRotation = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(sunAngleDegrees),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        return glm::vec3(
+            sunRotation * glm::vec4(-1.0f, -0.6f, -0.3f, 0.0f)
+        );
+    }
+    
+    
+    glm::mat4 SpinTheCamera(float deltaTime, float& cameraAngleDegrees,
+                        const glm::vec3& target)
+    {
+        constexpr float cameraSpeedDegreesPerSecond = 20.0f;
+
+        cameraAngleDegrees += cameraSpeedDegreesPerSecond * deltaTime;
+        cameraAngleDegrees = std::fmod(cameraAngleDegrees, 360.0f);
+
+        const glm::mat4 orbitRotation = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(cameraAngleDegrees),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        const glm::vec3 startingOffset(4.0f, 5.0f, 7.0f);
+        const glm::vec3 rotatedOffset =
+            glm::mat3(orbitRotation) * startingOffset;
+
+        const glm::vec3 cameraPosition = target + rotatedOffset;
+        const glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
+
+        return glm::lookAt(cameraPosition, target, cameraUp);
+    }
+    
+    
+    void RenderBackpack(
+        const ShaderProgram& shaderProgram, const glm::mat4& view, const glm::mat4& projection, 
+        std::vector<OBJ_Loader_Assimp::ImportedPart>& importedParts, GLuint backpackTexture)
+    {
+        
+        const glm::mat4 backpackModel(1.0f);
+        glUniform1i(shaderProgram.GetBasicUniformLocations().textureLocation, 0);
+        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, backpackTexture); 
+        
+        for (const auto& part : importedParts)
+        {
+            const bool useTexture = part.hasUVs && backpackTexture != 0;
+            
+            Rendering::SetBasicShaderUniforms(
+                shaderProgram, backpackModel, view, projection,
+                true, glm::vec3(0.75f), 1.0f, useTexture, 0.0f
+            );
+            
+            shaderProgram.SetBool("uUseLighting", false);
+            Rendering::DrawMesh(part.gpuMesh);
+        }
+    }
+    
 }
+
+
 
 
 
@@ -1424,9 +1963,9 @@ int main(int argc, char **argv) {
     }
     CheckOpenGLErrors("shader setup");
     
-    
     shaderProgram.CacheBasicUniformLocations();     // currently needs to be called every time after linking program 
-        
+    
+    
     
     // loading the testing-texture
     stbi_set_flip_vertically_on_load(true);     // changes stb's loading setting for subsequent loads
@@ -1443,49 +1982,23 @@ int main(int argc, char **argv) {
         std::cerr << "[Warning] Failed to load texture: textures/awesomeface.png\n";
     }
     
+    stbi_set_flip_vertically_on_load(false);
     
     
     
-    // preparing rendering objects  
-    MeshData pyramidData = BasicMeshes::MakeBasicPyramid();
-    MeshData cubeData = BasicMeshes::MakeBasicCube();
-    MeshData cube2Data = BasicMeshes::MakeBasicCube_TextureCompat();
-    MeshData sphereData = BasicMeshes::MakeBasicSphere();
+    // face culling
+    GeometryRenderSettings renderSettings = {};
+    renderSettings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
     
-    GpuMesh pyramidGpu = Rendering::CreateGpuMesh(pyramidData);
-    GpuMesh cubeGpu = Rendering::CreateGpuMesh(cubeData);
-    GpuMesh cubeGpu_v2 = Rendering::CreateGpuMesh(cube2Data);
-    GpuMesh sphereGpu = Rendering::CreateGpuMesh(sphereData);
+    // enable depth view 
+    glEnable(GL_DEPTH_TEST);
     
     
-    // making object instances
-    RenderObject pyramid_1{&pyramidGpu};
-    pyramid_1.transform.position = glm::vec3(-4.0f, 0.0f, 1.0f);
     
-    RenderObject pyramid_2{&pyramidGpu, Transform{}, true, Palette::blue};
-    pyramid_2.transform.position = glm::vec3(-4.0f, 0.0f, -2.5f);
-    pyramid_2.transform.rotationDegrees = glm::vec3(180.0f, 0.0f, 0.0f);
+    // ---- Runtime values ---- 
+    double previousTime = glfwGetTime();
     
-    RenderObject pyramid_manual{&pyramidGpu};
-    pyramid_manual.transform.position = glm::vec3(0.0f, 0.0f, 4.0f);
-    
-    
-    RenderObject cube_1{&cubeGpu};
-    cube_1.transform.position = glm::vec3(0.0f, 0.0f, 1.0f);
-    
-    RenderObject cube_2{&cubeGpu, Transform{}, true, Palette::pink};
-    cube_2.transform.position = glm::vec3(0.0f, 0.0f, -2.5f);
-    
-    RenderObject cube_V2{&cubeGpu_v2};
-    cube_V2.transform.position = glm::vec3(0.0f, 0.0f, -7.0f);
-    
-    
-    RenderObject sphere_1{&sphereGpu};
-    sphere_1.transform.position = glm::vec3(3.0f, 0.0f, -1.0f);
-    
-    RenderObject sphere_2{&sphereGpu, Transform{}, true, Palette::forestGreen};
-    sphere_2.transform.position = glm::vec3(4.5f, 0.0f, -2.5f);
-    
+    renderSettings.bPerspectiveView = true; 
     
     
     // camera, perspective 
@@ -1500,30 +2013,50 @@ int main(int argc, char **argv) {
     
     
     
-    // face culling
-    GeometryRenderSettings renderSettings = {};
-    renderSettings.bCullFace ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
     
-    // enable depth view 
-    glEnable(GL_DEPTH_TEST);
+    const GLint lightDirectionLocation = glGetUniformLocation(shaderProgram.ID, "ulightDirection");
     
     
+    float sunAngleDegrees = 0.0f;
+    float cameraAngleDegrees = 0.0f;
     
-    // runtime values
-    double previousTime = glfwGetTime();
     
-    renderSettings.bPerspectiveView = true; 
     
-    // controlled by keyboard toggles.
-    Demo::GeometryRuntimeValues_Inputs runtime_Inputs = {}; 
-    Demo::GeometryRuntimeValues_Transforms runtime_Info = {};
-    // Automatic animations.
-    Demo::GeometryRuntimeValues_Transforms cubeAuto;
-    cubeAuto.bRotateY = true;
-    Demo::GeometryRuntimeValues_Transforms sphereAuto;
-    sphereAuto.bTranslateZ = true;
-    Demo::GeometryRuntimeValues_Transforms pyramidAuto;
-    pyramidAuto.bScaleY = true;
+    // preparing rendering objects, week2 shapes  
+    Demo::TestingDefaultShapes basicShapes {}; 
+    
+    
+    
+    // extra check because file had problems loading earlier
+    const char* backpackPath = "models/backpack/backpack.obj";
+
+    std::cout << "Working directory: "
+              << std::filesystem::current_path() << '\n';
+    std::cout << "Looking for: "
+              << std::filesystem::absolute(backpackPath) << '\n';
+    std::cout << "File exists: "
+              << std::boolalpha << std::filesystem::exists(backpackPath) << '\n';
+    
+    // loading model using assimp 
+    std::vector<OBJ_Loader_Assimp::ImportedPart> importedParts;
+    
+    for (const auto& mesh : OBJ_Loader_Assimp::LoadModel("models/backpack/backpack.obj"))
+    {
+        std::cout << "Backpack part: " << mesh.vertices.size()
+                  << " vertices, " << mesh.indices.size() / 3
+                  << " triangles\n";
+
+        importedParts.push_back({
+            Rendering::CreateGpuMesh(mesh),
+            mesh.hasNormals,
+            mesh.hasUVs
+        });
+    }
+    
+    // backpack texture
+    stbi_set_flip_vertically_on_load(true);
+    GLuint backpackTexture = Texture::LoadTexture2D("models/backpack/diffuse.jpg");
+    stbi_set_flip_vertically_on_load(false);
     
     
     
@@ -1533,7 +2066,8 @@ int main(int argc, char **argv) {
         glfwPollEvents();
         processInput_ESCAPE(window);
         
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);   // window background color
+        //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);   // window background color, green-ish
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);   // window background color, black
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         // get time and deltaTime 
@@ -1544,12 +2078,6 @@ int main(int argc, char **argv) {
         // update runtime logic
         processInput_RenderSettings(window, renderSettings);
         
-        Demo::HandleRuntimeInputs(window, runtime_Inputs, runtime_Info);
-
-        Demo::UpdateTransforms(runtime_Info, deltaTime);
-        Demo::UpdateTransforms(cubeAuto, deltaTime);
-        Demo::UpdateTransforms(sphereAuto, deltaTime);
-        Demo::UpdateTransforms(pyramidAuto, deltaTime);
         
         
         glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);  
@@ -1574,114 +2102,45 @@ int main(int argc, char **argv) {
         }
         
         
+        
+        
         // activate program
         shaderProgram.use(); 
         
-        const BasicUniformLocations& uniforms = shaderProgram.GetBasicUniformLocations();
-        glUniform1i(uniforms.textureLocation, 0); // uTexture2D → unit 0
+        
+        view = Demo::SpinTheCamera(deltaTime, cameraAngleDegrees, cameraTarget);
+        
+        
+        //const glm::vec3 spinningSunDirection = Demo::SpinTheSun(deltaTime, sunAngleDegrees);
+        //glUniform3fv(lightDirectionLocation, 1, glm::value_ptr(spinningSunDirection));
         
         
         
-        glm::vec3 manualPosition = runtime_Info.translation;
-        glm::vec3 manualScale = runtime_Info.scale;
-        glm::vec3 manualRotationDegrees = runtime_Info.rotationDegrees;
+        //Demo::Update_TestingDefaultShapes(window, shaderProgram, basicShapes, deltaTime, view, projection, testTexture_crate);
         
         
-        // Pyramid: placed on the left.
-        glm::mat4 pyramidModel_1 = AcornMath::BuildModelMatrix(
-            pyramid_1.transform.position,
-            pyramid_1.transform.scale * pyramidAuto.scale,
-            pyramid_1.transform.rotationDegrees);
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_1, view, projection, pyramid_1.overrideColor, pyramid_1.solidColor, 1.0f);        
-        Rendering::DrawMesh(*pyramid_1.mesh);
-        
-        glm::mat4 pyramidModel_2 = AcornMath::BuildModelMatrix(
-            pyramid_2.transform.position,
-            pyramid_2.transform.scale * pyramidAuto.scale,
-            pyramid_2.transform.rotationDegrees);        
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_2, view, projection, pyramid_2.overrideColor, pyramid_2.solidColor, 1.0f);
-        Rendering::DrawMesh(*pyramid_2.mesh);
-        
-        
-        // manually controlled pyramid
-        glm::mat4 pyramidModel_Manual = AcornMath::BuildModelMatrix(
-            pyramid_manual.transform.position + manualPosition,
-            pyramid_manual.transform.scale * manualScale,
-            pyramid_manual.transform.rotationDegrees + manualRotationDegrees
-        );
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidModel_Manual, view, projection, pyramid_manual.overrideColor, pyramid_manual.solidColor, 1.0f);
-        //Rendering::DrawMesh(*pyramid_manual.mesh);
-        Rendering::DrawMesh_FaceColors(shaderProgram, *pyramid_manual.mesh, Demo::TestColors::pyramid_FaceColors); 
-        
-        
-        // Cube version 1: placed in the middle.
-        glm::mat4 cubeModel_1 = AcornMath::BuildModelMatrix(
-            cube_1.transform.position,
-            cube_1.transform.scale,
-            cube_1.transform.rotationDegrees + cubeAuto.rotationDegrees
-        );
-        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_1, view, projection, cube_1.overrideColor, cube_1.solidColor, 1.0f);
-        Rendering::DrawMesh(*cube_1.mesh);
-        
-        
-        glm::mat4 cubeModel_2 = AcornMath::BuildModelMatrix(
-            cube_2.transform.position,
-            cube_2.transform.scale,
-            cube_2.transform.rotationDegrees - cubeAuto.rotationDegrees
-        );
-        Rendering::SetBasicShaderUniforms(shaderProgram, cubeModel_2, view, projection, cube_2.overrideColor, cube_2.solidColor, 1.0f);
-        //Rendering::DrawMesh(*cube_2.mesh); 
-        Rendering::DrawMesh_FaceColors(shaderProgram, *cube_2.mesh, Demo::TestColors::cube_FaceColors); 
-        
-        
-        
-        // Cube version 2: placed behind the other cubes.  Testing textures 
-        glm::mat4 cubeModel_v2 = AcornMath::BuildModelMatrix(
-            cube_V2.transform.position,
-            cube_V2.transform.scale,
-            cube_V2.transform.rotationDegrees + cubeAuto.rotationDegrees
-        );
-        
-        glActiveTexture(GL_TEXTURE0);                       // Select unit 0.
-        glBindTexture(GL_TEXTURE_2D, testTexture_crate);     // Put this texture there.        
-        
-        Rendering::SetBasicShaderUniforms(
-            shaderProgram, cubeModel_v2, view, projection, 
-            cube_V2.overrideColor, cube_V2.solidColor, 1.0f, testTexture_crate != 0, 1.0f
-        );
-        Rendering::DrawMesh(*cube_V2.mesh); 
-        
-        
-        
-        // Sphere: placed on the right.
-        glm::mat4 sphereModel_1 = AcornMath::BuildModelMatrix(
-            sphere_1.transform.position + sphereAuto.translation,
-            sphere_1.transform.scale,
-            sphere_1.transform.rotationDegrees
-        );
-        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_1, view, projection, sphere_1.overrideColor, sphere_1.solidColor, 1.0f);
-        Rendering::DrawMesh(*sphere_1.mesh);
-        
-        glm::mat4 sphereModel_2 = AcornMath::BuildModelMatrix(
-            sphere_2.transform.position - sphereAuto.translation,
-            sphere_2.transform.scale,
-            sphere_2.transform.rotationDegrees
-        );
-        Rendering::SetBasicShaderUniforms(shaderProgram, sphereModel_2, view, projection, sphere_2.overrideColor, sphere_2.solidColor, 1.0f);
-        Rendering::DrawMesh(*sphere_2.mesh);
-        
+        Demo::RenderBackpack(shaderProgram, view, projection, importedParts, backpackTexture);
         
         
         glfwSwapBuffers(window);
     }
     
     
+    // temp backpack deletion
+    for (auto& part : importedParts)
+    {
+        Rendering::DestroyGpuMesh(part.gpuMesh);
+    }
+    
     
     // Mesh cleanup
-    Rendering::DestroyGpuMesh(pyramidGpu);
-    Rendering::DestroyGpuMesh(cubeGpu);
-    Rendering::DestroyGpuMesh(cubeGpu_v2);
-    Rendering::DestroyGpuMesh(sphereGpu);
+    Rendering::DestroyGpuMesh(basicShapes.pyramidGpu);
+    Rendering::DestroyGpuMesh(basicShapes.cubeGpu);
+    Rendering::DestroyGpuMesh(basicShapes.sphereGpu);
+    
+    Rendering::DestroyGpuMesh(basicShapes.pyramidGp_v2);
+    Rendering::DestroyGpuMesh(basicShapes.cubeGpu_v2);
+    
     
     glDeleteProgram(shaderProgram.ID);
     

@@ -1,6 +1,10 @@
 add_rules("mode.debug", "mode.release")
 add_rules("plugin.vsxmake.autoupdate")
 
+
+set_project("Acorn")
+
+
 -- add_requires("libsdl3")   -- More advanced than glfw? look at later
 add_requires("glfw")
 add_requires("glm 1.0.3")
@@ -26,9 +30,11 @@ add_requires("glad v0.1.36", {configs = {
 }})
 
 -- External dependencies
-add_requires("glfw", "glm") 
+add_requires("glfw", "glm", "assimp")
 
 target("Acorn")
+    -- C++ language version
+    set_languages("c++20")
     -- Build an executable
     set_kind("binary")
     -- C++ source files to compile
@@ -42,6 +48,7 @@ target("Acorn")
     add_packages("glfw")
     add_packages("glm")
     add_packages("glad") 
+    add_packages("assimp") 
     -- Other files to display in Rider
     add_extrafiles("shaders/**.vert", "shaders/**.frag")
     add_extrafiles("textures/**.jpg", "textures/**.png")
@@ -55,6 +62,10 @@ after_build(function (target)
     local texturedir = path.join(target:targetdir(), "textures")
     os.mkdir(texturedir)
     os.cp(path.join(os.projectdir(), "textures", "*"), texturedir)
+    
+    local modeldir = path.join(target:targetdir(), "models")
+    os.mkdir(modeldir)
+    os.cp(path.join(os.projectdir(), "models", "*"), modeldir)
 end)
 
 --
