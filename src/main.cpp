@@ -2005,7 +2005,19 @@ namespace Demo
         {
             values.scale = glm::vec3(1.0f);           // (1, 1, 1)
             values.rotationDegrees = glm::vec3(0.0f); // (0, 0, 0)
-            values.translation = glm::vec3(0.0f);     // (0, 0, 0)                        
+            values.translation = glm::vec3(0.0f);     // (0, 0, 0)      
+            
+            values.bScaleX = false;
+            values.bScaleY = false;
+            values.bScaleZ = false;
+            
+            values.bRotateX = false;
+            values.bRotateY = false;
+            values.bRotateZ = false;
+            
+            values.bTranslateX = false;
+            values.bTranslateY = false;
+            values.bTranslateZ = false;
         }
     }
     
@@ -2406,6 +2418,8 @@ namespace Demo
     }
     
     
+    
+    
     struct Testing_TwoBackpacks
     {
         using Model = AcornData::Model;
@@ -2469,6 +2483,363 @@ namespace Demo
         );
         Rendering::DrawModel(shaderProgram, view, projection, models.backpack_mine, backpackMatrix_Right, models.backpack_mine.textureID);
     }
+    
+    
+    
+    struct Testing_TwoTeapots
+    {
+        using Model = AcornData::Model;
+        
+        // controlled by keyboard toggles.
+        GeometryRuntimeValues_Inputs runtime_Inputs{}; 
+        GeometryRuntimeValues_Transforms runtime_Info{};
+        
+        
+        // loading model using assimp 
+        const char* teapotPath = "models/teapot/teapot.obj";
+        const char* teapotTexturePath = "models/teapot/default.png";
+        
+        // Left Backpack, using assimp loader
+        Model teapot_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(teapotPath); 
+        
+        // right Backpack, using my loader
+        Model teapot_mine = OBJ_Loader::UploadModel(teapotPath, true);
+        
+        
+        Testing_TwoTeapots()
+        {
+            stbi_set_flip_vertically_on_load(true);
+            GLuint textureID = Texture::LoadTexture2D(teapotTexturePath);
+            stbi_set_flip_vertically_on_load(false);
+            
+            teapot_assimp.transform.position = glm::vec3(-3.0f, 0.0f, 0.0f);
+            teapot_assimp.transform.scale = glm::vec3(0.025f);
+            teapot_assimp.overrideColor = true;
+            teapot_assimp.solidColor = glm::vec3(0.75f);
+            teapot_assimp.textureID = textureID;
+            
+            
+            teapot_mine.transform.position = glm::vec3(3.0f, 0.0f, 0.0f);
+            teapot_mine.transform.scale = glm::vec3(0.025f);
+            teapot_mine.overrideColor = true;
+            teapot_mine.solidColor = glm::vec3(0.75f);
+            teapot_mine.textureID = textureID;
+        }
+    };
+    
+    // Left Backpack = assimp obj loader, Right Backpack = my obj loader
+    void Update_DrawTwoTeapots(GLFWwindow* window, const ShaderProgram& shaderProgram, Testing_TwoTeapots& models,
+        float deltaTime, const glm::mat4& view, const glm::mat4& projection)
+    {
+        HandleRuntimeInputs(window, models.runtime_Inputs, models.runtime_Info);
+        UpdateTransforms(models.runtime_Info, deltaTime);
+        
+        
+        const glm::mat4 teapotMatrix_Left = AcornMath::BuildModelMatrix(
+            models.teapot_assimp.transform.position + models.runtime_Info.translation,
+            models.teapot_assimp.transform.scale * models.runtime_Info.scale,
+            models.teapot_assimp.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.teapot_assimp, teapotMatrix_Left, models.teapot_assimp.textureID);
+        
+        
+        const glm::mat4 teapotMatrix_Right = AcornMath::BuildModelMatrix(
+            models.teapot_mine.transform.position + models.runtime_Info.translation,
+            models.teapot_mine.transform.scale * models.runtime_Info.scale,
+            models.teapot_mine.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.teapot_mine, teapotMatrix_Right, models.teapot_mine.textureID);
+    }
+    
+    
+    
+    
+    struct Testing_TwoIpshead
+    {
+        using Model = AcornData::Model;
+        
+        // controlled by keyboard toggles.
+        GeometryRuntimeValues_Inputs runtime_Inputs{}; 
+        GeometryRuntimeValues_Transforms runtime_Info{};
+        
+        
+        // loading model using assimp 
+        const char* lpsheadPath = "models/lpshead/head.obj";               // might be "models/lpshead/head.OBJ"
+        const char* lpsheadTexturePath = "models/lpshead/rendered.jpg";
+        //const char* lpsheadTexturePath = "models/lpshead/lambertian.jpg";
+        
+        
+        // Left Backpack, using assimp loader
+        Model lpshead_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(lpsheadPath); 
+        
+        // right Backpack, using my loader
+        Model lpshead_mine = OBJ_Loader::UploadModel(lpsheadPath, true);
+        
+        
+        Testing_TwoIpshead()
+        {
+            stbi_set_flip_vertically_on_load(true);
+            GLuint textureID = Texture::LoadTexture2D(lpsheadTexturePath);
+            stbi_set_flip_vertically_on_load(false);
+            
+            lpshead_assimp.transform.position = glm::vec3(-2.0f, 2.0f, 0.0f);
+            lpshead_assimp.transform.scale = glm::vec3(10.0f);
+            lpshead_assimp.overrideColor = true;
+            lpshead_assimp.solidColor = glm::vec3(0.75f);
+            lpshead_assimp.textureID = textureID;
+            
+            
+            lpshead_mine.transform.position = glm::vec3(2.0f, 2.0f, 0.0f);
+            lpshead_mine.transform.scale = glm::vec3(10.0f);
+            lpshead_mine.overrideColor = true;
+            lpshead_mine.solidColor = glm::vec3(0.75f);
+            lpshead_mine.textureID = textureID;
+        }
+    };
+    
+    // Left Backpack = assimp obj loader, Right Backpack = my obj loader
+    void Update_DrawTwoIpshead(GLFWwindow* window, const ShaderProgram& shaderProgram, Testing_TwoIpshead& models,
+        float deltaTime, const glm::mat4& view, const glm::mat4& projection)
+    {
+        HandleRuntimeInputs(window, models.runtime_Inputs, models.runtime_Info);
+        UpdateTransforms(models.runtime_Info, deltaTime);
+        
+        
+        const glm::mat4 lpsheadMatrix_Left = AcornMath::BuildModelMatrix(
+            models.lpshead_assimp.transform.position + models.runtime_Info.translation,
+            models.lpshead_assimp.transform.scale * models.runtime_Info.scale,
+            models.lpshead_assimp.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.lpshead_assimp, lpsheadMatrix_Left, models.lpshead_assimp.textureID);
+        
+        
+        const glm::mat4 lpsheadMatrix_Right = AcornMath::BuildModelMatrix(
+            models.lpshead_mine.transform.position + models.runtime_Info.translation,
+            models.lpshead_mine.transform.scale * models.runtime_Info.scale,
+            models.lpshead_mine.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.lpshead_mine, lpsheadMatrix_Right, models.lpshead_mine.textureID);
+    }
+    
+    
+    
+    
+    struct Testing_TwoCubes
+    {
+        using Model = AcornData::Model;
+        
+        // controlled by keyboard toggles.
+        GeometryRuntimeValues_Inputs runtime_Inputs{}; 
+        GeometryRuntimeValues_Transforms runtime_Info{};
+        
+        
+        // loading model using assimp 
+        const char* cubePath = "models/cube/cube.obj";
+        const char* cubeTexturePath = "models/cube/default.png";
+        
+        
+        // Left Backpack, using assimp loader
+        Model cube_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(cubePath); 
+        
+        // right Backpack, using my loader
+        Model cube_mine = OBJ_Loader::UploadModel(cubePath, true);
+        
+        
+        Testing_TwoCubes()
+        {
+            stbi_set_flip_vertically_on_load(true);
+            GLuint textureID = Texture::LoadTexture2D(cubeTexturePath);
+            stbi_set_flip_vertically_on_load(false);
+            
+            cube_assimp.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
+            cube_assimp.transform.scale = glm::vec3(2.0f);
+            cube_assimp.overrideColor = true;
+            cube_assimp.solidColor = glm::vec3(0.75f);
+            cube_assimp.textureID = textureID;
+            
+            
+            cube_mine.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+            cube_mine.transform.scale = glm::vec3(2.0f);
+            cube_mine.overrideColor = true;
+            cube_mine.solidColor = glm::vec3(0.75f);
+            cube_mine.textureID = textureID;
+        }
+    };
+    
+    // Left Backpack = assimp obj loader, Right Backpack = my obj loader
+    void Update_DrawTwoCubes(GLFWwindow* window, const ShaderProgram& shaderProgram, Testing_TwoCubes& models,
+        float deltaTime, const glm::mat4& view, const glm::mat4& projection)
+    {
+        HandleRuntimeInputs(window, models.runtime_Inputs, models.runtime_Info);
+        UpdateTransforms(models.runtime_Info, deltaTime);
+        
+        
+        const glm::mat4 cubeMatrix_Left = AcornMath::BuildModelMatrix(
+            models.cube_assimp.transform.position + models.runtime_Info.translation,
+            models.cube_assimp.transform.scale * models.runtime_Info.scale,
+            models.cube_assimp.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.cube_assimp, cubeMatrix_Left, models.cube_assimp.textureID);
+        
+        
+        const glm::mat4 cubeMatrix_Right = AcornMath::BuildModelMatrix(
+            models.cube_mine.transform.position + models.runtime_Info.translation,
+            models.cube_mine.transform.scale * models.runtime_Info.scale,
+            models.cube_mine.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.cube_mine, cubeMatrix_Right, models.cube_mine.textureID);
+    }
+    
+    
+    
+    
+    struct Testing_TwoPines
+    {
+        using Model = AcornData::Model;
+        
+        // controlled by keyboard toggles.
+        GeometryRuntimeValues_Inputs runtime_Inputs{}; 
+        GeometryRuntimeValues_Transforms runtime_Info{};
+        
+        
+        // loading model using assimp 
+        const char* pinePath = "models/pine/scrubPine.obj";
+        const char* pineTexturePath = "models/pine/LushPine.png";
+        
+        
+        // Left Backpack, using assimp loader
+        Model pine_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(pinePath); 
+        
+        // right Backpack, using my loader
+        Model pine_mine = OBJ_Loader::UploadModel(pinePath, true);
+        
+        
+        Testing_TwoPines()
+        {
+            stbi_set_flip_vertically_on_load(true);
+            GLuint textureID = Texture::LoadTexture2D(pineTexturePath);
+            stbi_set_flip_vertically_on_load(false);
+            
+            pine_assimp.transform.position = glm::vec3(-3.0f, -2.0f, 0.5f);
+            pine_assimp.transform.scale = glm::vec3(0.01f);
+            pine_assimp.overrideColor = true;
+            pine_assimp.solidColor = glm::vec3(0.75f);
+            pine_assimp.textureID = textureID;
+            
+            
+            pine_mine.transform.position = glm::vec3(3.0f, -2.0f, 0.5f);
+            pine_mine.transform.scale = glm::vec3(0.01f);
+            pine_mine.overrideColor = true;
+            pine_mine.solidColor = glm::vec3(0.75f);
+            pine_mine.textureID = textureID;
+        }
+    };
+    
+    // Left Backpack = assimp obj loader, Right Backpack = my obj loader
+    void Update_DrawTwoPines(GLFWwindow* window, const ShaderProgram& shaderProgram, Testing_TwoPines& models,
+        float deltaTime, const glm::mat4& view, const glm::mat4& projection)
+    {
+        HandleRuntimeInputs(window, models.runtime_Inputs, models.runtime_Info);
+        UpdateTransforms(models.runtime_Info, deltaTime);
+        
+        
+        const glm::mat4 pineMatrix_Left = AcornMath::BuildModelMatrix(
+            models.pine_assimp.transform.position + models.runtime_Info.translation,
+            models.pine_assimp.transform.scale * models.runtime_Info.scale,
+            models.pine_assimp.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.pine_assimp, pineMatrix_Left, models.pine_assimp.textureID);
+        
+        
+        const glm::mat4 pineMatrix_Right = AcornMath::BuildModelMatrix(
+            models.pine_mine.transform.position + models.runtime_Info.translation,
+            models.pine_mine.transform.scale * models.runtime_Info.scale,
+            models.pine_mine.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.pine_mine, pineMatrix_Right, models.pine_mine.textureID);
+    }
+    
+    
+    
+    
+    struct Testing_TwoSportCars
+    {
+        using Model = AcornData::Model;
+        
+        // controlled by keyboard toggles.
+        GeometryRuntimeValues_Inputs runtime_Inputs{}; 
+        GeometryRuntimeValues_Transforms runtime_Info{};
+        
+        
+        // loading model using assimp 
+        const char* sportCarsPath = "models/sportsCar/sportsCar.obj";
+        //const char* sportCarTexturePath = "models/sportsCar/";        // no texture
+        
+        
+        // Left Backpack, using assimp loader
+        Model sportCar_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(sportCarsPath); 
+        
+        // right Backpack, using my loader
+        Model sportCar_mine = OBJ_Loader::UploadModel(sportCarsPath, true);
+        
+        
+        Testing_TwoSportCars()
+        {
+            //stbi_set_flip_vertically_on_load(true);
+            //GLuint textureID = Texture::LoadTexture2D(sportCarTexturePath);
+            //stbi_set_flip_vertically_on_load(false);
+            
+            sportCar_assimp.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
+            sportCar_assimp.overrideColor = true;
+            sportCar_assimp.solidColor = glm::vec3(0.75f);
+            //sportCar_assimp.textureID = textureID;
+            
+            
+            sportCar_mine.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+            sportCar_mine.overrideColor = true;
+            sportCar_mine.solidColor = glm::vec3(0.75f);
+            //sportCar_mine.textureID = textureID;
+        }
+    };
+    
+    // Left Backpack = assimp obj loader, Right Backpack = my obj loader
+    void Update_DrawTwoSportCars(GLFWwindow* window, const ShaderProgram& shaderProgram, Testing_TwoSportCars& models,
+        float deltaTime, const glm::mat4& view, const glm::mat4& projection)
+    {
+        HandleRuntimeInputs(window, models.runtime_Inputs, models.runtime_Info);
+        UpdateTransforms(models.runtime_Info, deltaTime);
+        
+        
+        const glm::mat4 sportCarMatrix_Left = AcornMath::BuildModelMatrix(
+            models.sportCar_assimp.transform.position + models.runtime_Info.translation,
+            models.sportCar_assimp.transform.scale * models.runtime_Info.scale,
+            models.sportCar_assimp.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.sportCar_assimp, sportCarMatrix_Left, models.sportCar_assimp.textureID);
+        
+        
+        const glm::mat4 sportCarMatrix_Right = AcornMath::BuildModelMatrix(
+            models.sportCar_mine.transform.position + models.runtime_Info.translation,
+            models.sportCar_mine.transform.scale * models.runtime_Info.scale,
+            models.sportCar_mine.transform.rotationDegrees + models.runtime_Info.rotationDegrees
+        );
+        Rendering::DrawModel(shaderProgram, view, projection, models.sportCar_mine, sportCarMatrix_Right, models.sportCar_mine.textureID);
+    }
+    
+    
+    
+    enum class TestScene
+    {
+        DefaultShapes = 1,
+        Backpacks = 2,
+        Teapots = 3,
+        Cubes = 4,
+        Pines = 5,
+        SportCars = 6,
+        Ipshead = 7,
+        
+        AllModels = 8
+    };
     
     
 }
@@ -2586,8 +2957,16 @@ int main(int argc, char **argv) {
     //  preparing rendering objects, week3 models 
     Demo::Testing_TwoBackpacks twoBackpacks {};
     
+    Demo::Testing_TwoTeapots twoTeapots {};
+    Demo::Testing_TwoIpshead twoIpshead {};
+    Demo::Testing_TwoCubes twoCubes {};
+    Demo::Testing_TwoPines twoPines {};
+    Demo::Testing_TwoSportCars twoSportCars {};
     
+    int selectedTest = static_cast<int>(Demo::TestScene::Backpacks);
     
+    bool useBlackBackground = true;
+    bool previousZeroDown = false;
     
     
     // render loop
@@ -2596,8 +2975,22 @@ int main(int argc, char **argv) {
         glfwPollEvents();
         processInput_ESCAPE(window);
         
-        //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);   // window background color, green-ish
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);   // window background color, black
+        // switch between bright and dark background with key press 0 
+        const bool zeroDown = glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS;
+        if (zeroDown && !previousZeroDown)
+        {
+            useBlackBackground = !useBlackBackground;
+        }
+        previousZeroDown = zeroDown;
+        if (useBlackBackground)
+        {
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        else
+        {
+            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        }
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         // get time and deltaTime 
@@ -2647,7 +3040,69 @@ int main(int argc, char **argv) {
         
         //Demo::Update_TestingDefaultShapes(window, shaderProgram, basicShapes, deltaTime, view, projection, testTexture_crate);
         
-        Demo::Update_DrawTwoBackpacks(window, shaderProgram, twoBackpacks, deltaTime, view, projection);
+        
+        
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) selectedTest = 1;
+        else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) selectedTest = 2;
+        else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) selectedTest = 3;
+        else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) selectedTest = 4;
+        else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) selectedTest = 5;
+        else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) selectedTest = 6;
+        else if (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS) selectedTest = 7;
+        else if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS) selectedTest = 8;
+
+        switch (static_cast<Demo::TestScene>(selectedTest))
+        {
+        case Demo::TestScene::DefaultShapes:
+            Demo::Update_TestingDefaultShapes(
+                window, shaderProgram, basicShapes, deltaTime, view, projection,
+                testTexture_crate);
+            break;
+
+        case Demo::TestScene::Backpacks:
+            Demo::Update_DrawTwoBackpacks(
+                window, shaderProgram, twoBackpacks, deltaTime, view, projection);
+            break;
+
+        case Demo::TestScene::Teapots:
+            Demo::Update_DrawTwoTeapots(
+                window, shaderProgram, twoTeapots, deltaTime, view, projection);
+            break;
+
+        case Demo::TestScene::Cubes:
+            Demo::Update_DrawTwoCubes(
+                window, shaderProgram, twoCubes, deltaTime, view, projection);
+            break;
+
+        case Demo::TestScene::Pines:
+            Demo::Update_DrawTwoPines(
+                window, shaderProgram, twoPines, deltaTime, view, projection);
+            break;
+
+        case Demo::TestScene::SportCars:
+            Demo::Update_DrawTwoSportCars(
+                window, shaderProgram, twoSportCars, deltaTime, view, projection);
+            break;
+
+        case Demo::TestScene::Ipshead:
+            Demo::Update_DrawTwoIpshead(
+                window, shaderProgram, twoIpshead, deltaTime, view, projection);
+            break;
+            
+            case Demo::TestScene::AllModels:
+            Demo::Update_DrawTwoBackpacks(window, shaderProgram, twoBackpacks, deltaTime, view, projection);
+            
+            Demo::Update_DrawTwoTeapots(window, shaderProgram, twoTeapots, deltaTime, view, projection);
+            Demo::Update_DrawTwoCubes(window, shaderProgram, twoCubes, deltaTime, view, projection);
+            
+            Demo::Update_DrawTwoPines(window, shaderProgram, twoPines, deltaTime, view, projection);
+            
+            Demo::Update_DrawTwoSportCars(window, shaderProgram, twoSportCars, deltaTime, view, projection);
+            Demo::Update_DrawTwoIpshead(window, shaderProgram, twoIpshead, deltaTime, view, projection);
+            break;
+        }
+        
+        
         
         
         
@@ -2668,7 +3123,22 @@ int main(int argc, char **argv) {
     // Model cleanup
     //Rendering::DestroyGpuModel(backpack);    
     Rendering::DestroyGpuModel(twoBackpacks.backpack_assimp);    
-    Rendering::DestroyGpuModel(twoBackpacks.backpack_mine);    
+    Rendering::DestroyGpuModel(twoBackpacks.backpack_mine);  
+    
+    Rendering::DestroyGpuModel(twoTeapots.teapot_assimp);    
+    Rendering::DestroyGpuModel(twoTeapots.teapot_mine);    
+    
+    Rendering::DestroyGpuModel(twoIpshead.lpshead_assimp);    
+    Rendering::DestroyGpuModel(twoIpshead.lpshead_mine);    
+    
+    Rendering::DestroyGpuModel(twoCubes.cube_assimp);    
+    Rendering::DestroyGpuModel(twoCubes.cube_mine);    
+    
+    Rendering::DestroyGpuModel(twoPines.pine_assimp);    
+    Rendering::DestroyGpuModel(twoPines.pine_mine);    
+    
+    Rendering::DestroyGpuModel(twoSportCars.sportCar_assimp);    
+    Rendering::DestroyGpuModel(twoSportCars.sportCar_mine);    
     
     
     glDeleteProgram(shaderProgram.ID);
