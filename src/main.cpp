@@ -3038,9 +3038,16 @@ int main(int argc, char **argv) {
         
         
         
+        
+        
         //Demo::Update_TestingDefaultShapes(window, shaderProgram, basicShapes, deltaTime, view, projection, testTexture_crate);
         
         
+        
+        // - Backpack, teapot, and cube render with both loaders.
+        // - Pine renders with both loaders. More of the tree is visible with back-face culling disabled, which suggests some surfaces need two-sided rendering.
+        // - Sports car and head render only through Assimp. The custom loader aborts on quads that fail both diagonal checks.
+        // - The head test uses `rendered.jpg`. Its material specifies `lambertian.jpg` as the diffuse texture, so the texture needs retesting with that image.
         
         if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) selectedTest = 1;
         else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) selectedTest = 2;
