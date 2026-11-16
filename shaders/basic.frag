@@ -71,3 +71,6 @@ void main()
     
     FragColor = baseColor;
 }
+
+
+// Note: less if-cases 

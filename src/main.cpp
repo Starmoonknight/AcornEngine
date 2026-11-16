@@ -301,8 +301,8 @@ namespace AcornData
         std::size_t indexCount = 0;
     };
     
-    // CPU-side geometry data
-    struct MeshData
+    // CPU-side vertices, indices, and other data produced by the loader
+    struct CpuMeshData
     {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices; 
@@ -316,7 +316,8 @@ namespace AcornData
         bool hasUVs = false;
     };
     
-    // GPU handles and drawing metadata
+    // GPU handles and drawing metadata 	The VAO, buffers, and draw information for one uploaded mesh
+    //      one successful load and upload per path and settings combination. ? 
     struct GpuMesh
     {
         GLuint vao = 0;
@@ -331,10 +332,16 @@ namespace AcornData
         bool hasUVs = false;
     };
     
+    // The collection of GpuMesh resources for one imported model
+    struct GpuModel
+    {
+        std::vector<GpuMesh> meshes;
+    };
     
-    struct RenderObject
+    // 	One scene instance with a reference to a single GpuMesh, a transform, and any rendering overrides
+    struct MeshInstance
     {        
-        const GpuMesh* mesh= nullptr;
+        const GpuMesh* mesh = nullptr;
         Transform transform{};
         
         bool overrideColor = false;
@@ -343,10 +350,10 @@ namespace AcornData
         GLuint textureID = 0; // 0 means no texture selected for this object.
     };
     
-    
-    struct Model
+    // 	One scene instance with a reference to a GpuModel, a transform, and any rendering overrides
+    struct ModelInstance
     {
-        std::vector<GpuMesh> meshes;
+        const GpuModel* gpuModel = nullptr;
         Transform transform{};
         
         // for tin´tint the whole mesh
@@ -425,11 +432,11 @@ namespace AcornMath
 
 namespace  BasicMeshes
 {
-    AcornData::MeshData MakePyramid_Basic()
+    AcornData::CpuMeshData MakePyramid_Basic()
     {
-        using AcornData::MeshData;   
+        using AcornData::CpuMeshData;   
         
-        MeshData mesh;
+        CpuMeshData mesh;
         
         mesh.vertices = {
             { glm::vec3( 0.5f, -0.5f, -0.5f) }, // 0, bottom, back right 
@@ -480,11 +487,11 @@ namespace  BasicMeshes
     }
     
     
-    AcornData::MeshData MakeDefaultPyramid()
+    AcornData::CpuMeshData MakeDefaultPyramid()
     {
-        using AcornData::MeshData;
+        using AcornData::CpuMeshData;
 
-        MeshData mesh;
+        CpuMeshData mesh;
         
         // 1. Positions, grouped by face.
         mesh.vertices = {
@@ -614,11 +621,11 @@ namespace  BasicMeshes
     }
     
     
-    AcornData::MeshData MakeCube_Basic()
+    AcornData::CpuMeshData MakeCube_Basic()
     {
-        using AcornData::MeshData;  
+        using AcornData::CpuMeshData;  
         
-        MeshData mesh;
+        CpuMeshData mesh;
         
         mesh.vertices = {
             { glm::vec3( 0.5f, -0.5f, -0.5f)},  // 0, bottom, back right 
@@ -684,11 +691,11 @@ namespace  BasicMeshes
     }
     
     
-    AcornData::MeshData MakeDefaultCube()
+    AcornData::CpuMeshData MakeDefaultCube()
     {
-        using AcornData::MeshData;  
+        using AcornData::CpuMeshData;  
         
-        MeshData mesh;
+        CpuMeshData mesh;
         
         mesh.vertices = {
             // front face
@@ -918,11 +925,11 @@ namespace  BasicMeshes
         std::cout << "Sphere triangle count:" << indices.size() / 3 << std::endl;
     }
     
-    AcornData::MeshData generateSortofSphere_Color(int rings = 9, int slices = 16)
+    AcornData::CpuMeshData generateSortofSphere_Color(int rings = 9, int slices = 16)
     {
-        using AcornData::MeshData;  
+        using AcornData::CpuMeshData;  
         
-        MeshData sphereMesh;  
+        CpuMeshData sphereMesh;  
         std::vector<float> spherePositions; 
         
         generateSortofSphere(spherePositions, sphereMesh.indices, rings, slices); 
@@ -946,7 +953,7 @@ namespace  BasicMeshes
         return sphereMesh; 
     };    
     
-    AcornData::MeshData MakeBasicSphere()
+    AcornData::CpuMeshData MakeBasicSphere()
     {
         return generateSortofSphere_Color();
     }
@@ -957,7 +964,7 @@ namespace  BasicMeshes
 namespace Rendering
 {
     
-    AcornData::GpuMesh CreateGpuMesh(const AcornData::MeshData& mesh, GLenum usage = GL_STATIC_DRAW)
+    AcornData::GpuMesh CreateGpuMesh(const AcornData::CpuMeshData& mesh, GLenum usage = GL_STATIC_DRAW)
     {
         using AcornData::Vertex;
         using AcornData::GpuMesh;
@@ -1088,20 +1095,20 @@ namespace Rendering
     }
     
     
-    AcornData::Model CreateGpuModel(const std::vector<AcornData::MeshData>& meshes, GLenum usage = GL_STATIC_DRAW)
+    AcornData::GpuModel CreateGpuModel(const std::vector<AcornData::CpuMeshData>& modelMeshes, GLenum usage = GL_STATIC_DRAW)
     {
-        AcornData::Model model;
-        model.meshes.reserve(meshes.size());
+        AcornData::GpuModel gpuModel;
+        gpuModel.meshes.reserve(modelMeshes.size());
 
-        for (const auto& mesh : meshes)
+        for (const auto& mesh : modelMeshes)
         {
-            model.meshes.push_back(CreateGpuMesh(mesh, usage));
+            gpuModel.meshes.push_back(CreateGpuMesh(mesh, usage));
         }
 
-        return model;
+        return gpuModel;
     }
     
-    void DestroyGpuModel(AcornData::Model& model)
+    void DestroyGpuModel(AcornData::GpuModel& model)
     {
         for (auto& mesh : model.meshes)
         {
@@ -1227,15 +1234,20 @@ namespace Rendering
     
     void DrawModel(
         const ShaderProgram& shaderProgram, const glm::mat4& view, const glm::mat4& projection, 
-        const AcornData::Model& model, const glm::mat4 modelMatrix, GLuint modelTexture)
+        const AcornData::ModelInstance& model, const glm::mat4 modelMatrix, GLuint modelTexture)
     {
+        if (model.gpuModel == nullptr)
+        {
+            return;
+        }
+        
         shaderProgram.use();
         glUniform1i(shaderProgram.GetBasicUniformLocations().textureLocation, 0);
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, modelTexture); 
         
-        for (const auto& mesh : model.meshes)
+        for (const auto& mesh : model.gpuModel->meshes)
         {
             const bool useTexture = mesh.hasUVs && modelTexture != 0;
             
@@ -1296,9 +1308,9 @@ namespace Texture
 namespace OBJ_Loader_Assimp
 {
     
-    AcornData::MeshData ConvertMesh(const aiMesh& source)
+    AcornData::CpuMeshData ConvertMesh_Assimp(const aiMesh& source)
     {
-        AcornData::MeshData mesh;
+        AcornData::CpuMeshData mesh;
         mesh.hasNormals = source.HasNormals();
         mesh.hasUVs = source.HasTextureCoords(0);
 
@@ -1354,10 +1366,18 @@ namespace OBJ_Loader_Assimp
     }
     
     
-    std::vector<AcornData::MeshData> LoadMesh(const char* filePath)
+    std::vector<AcornData::CpuMeshData> LoadMesh_Assimp(const char* filePath, bool flipUVs = false)
     {
         Assimp::Importer importer;
-        const aiScene *scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_FlipUVs);	
+        
+        unsigned int flags = aiProcess_Triangulate;
+        if (flipUVs)
+        {
+            flags |= aiProcess_FlipUVs;
+        }
+        
+        const aiScene* scene = importer.ReadFile(filePath, flags);
+        
         
         if (scene == nullptr || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE))
         {
@@ -1366,11 +1386,11 @@ namespace OBJ_Loader_Assimp
             return {};
         }
         
-        std::vector<AcornData::MeshData> meshes;
+        std::vector<AcornData::CpuMeshData> meshes;
         
         for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
         {
-            AcornData::MeshData mesh = ConvertMesh(*scene->mMeshes[i]);
+            AcornData::CpuMeshData mesh = ConvertMesh_Assimp(*scene->mMeshes[i]);
 
             if (!mesh.indices.empty())
             {
@@ -1387,9 +1407,10 @@ namespace OBJ_Loader_Assimp
     }
     
     
-    // A wrapper for making a const std::vector<AcornData::MeshData> meshes = LoadMesh, 
-    // and then calling Rendering::CreateGpuModel(meshes), with extra log info
-    AcornData::Model UploadModel_Assimp(const char* filePath)
+    // Loads a model with Assimp, logs the vertex and triangle counts for each mesh,
+    // and uploads the meshes as a GpuModel. Requires a current OpenGL context.
+    // If flipUVs is true, flips the V texture coordinate during import.
+    AcornData::GpuModel UploadModel_Assimp(const char* filePath, bool flipUVs = false)
     {
         // extra check because file had problems loading earlier
         std::cout << "Working directory: "
@@ -1400,7 +1421,7 @@ namespace OBJ_Loader_Assimp
                   << std::boolalpha << std::filesystem::exists(filePath) << '\n';
     
         // reading all data and translating to the format my program use 
-        const std::vector<AcornData::MeshData> meshes = LoadMesh(filePath);
+        const std::vector<AcornData::CpuMeshData> meshes = LoadMesh_Assimp(filePath, flipUVs);
         // extra info on what info was read: 
         for (const auto& mesh : meshes)
         {
@@ -1410,8 +1431,7 @@ namespace OBJ_Loader_Assimp
         }
         
         // creating a model from the data 
-        AcornData::Model model = Rendering::CreateGpuModel(meshes);
-        return model;
+        return Rendering::CreateGpuModel(meshes);
     }
     
 }
@@ -1526,7 +1546,7 @@ namespace OBJ_Loader
         {
             return corner.hasUV; // v/vt                //when only one slash, it requires a UV, as in "3/7".
         }
-
+        
         
         // read the normals after the two slashes:
         // A second slash introduces a required normal index, with or without a UV.
@@ -1550,7 +1570,7 @@ namespace OBJ_Loader
         const std::vector<glm::vec3>& positions,
         const std::vector<glm::vec2>& uvs,
         const std::vector<glm::vec3>& normals,
-        AcornData::MeshData& mesh)
+        AcornData::CpuMeshData& mesh)
     {
         // Store up to four corners so the whole face can be checked before appending it.
         std::array<FaceCorner, 4> corners{};            // corners has four slots because the biggest face this loader accepts is a quad.
@@ -1672,7 +1692,8 @@ namespace OBJ_Loader
     
     // Reads an OBJ file into CPU-side meshes, using `o` lines as mesh boundaries.
     // Optionally flips the vertical UV coordinate. Returns an empty vector on failure.
-    std::vector<AcornData::MeshData> LoadMesh(const char* filePath, bool flipUVs = false)
+    // If skipInvalidFaces is true, log and skip rejected faces. Otherwise, abort the import.
+    std::vector<AcornData::CpuMeshData> LoadMesh(const char* filePath, bool flipUVs = false, bool skipInvalidFaces = false)
     {
         std::ifstream file(filePath);                               // creates an input file stream and tries to open the file at that path.
         if (!file)                                                  // file:	The OBJ file on disk
@@ -1688,8 +1709,8 @@ namespace OBJ_Loader
         std::vector<glm::vec2> temp_uvs;
         std::vector<glm::vec3> temp_normals;
         
-        std::vector<AcornData::MeshData> meshes;                    // the finished meshes, what LoadModel() eventually returns.
-        AcornData::MeshData mesh;                                   // the current mesh being worked on that AppendFace() is building.
+        std::vector<AcornData::CpuMeshData> meshes;                    // the finished meshes, what LoadModel() eventually returns.
+        AcornData::CpuMeshData mesh;                                   // the current mesh being worked on that AppendFace() is building.
         
         
         // Lambda: If mesh that was worked on has recorded info, adds the current mesh to the finished list.
@@ -1698,7 +1719,7 @@ namespace OBJ_Loader
             if (!mesh.indices.empty())
             {
                 meshes.push_back(std::move(mesh));                  // transfer the mesh's vectors without copying them.
-                mesh = AcornData::MeshData{};                       // start a fresh mesh for the next object.
+                mesh = AcornData::CpuMeshData{};                       // start a fresh mesh for the next object.
             }
         };
         
@@ -1711,7 +1732,7 @@ namespace OBJ_Loader
         const auto fail = [&](const char* reason)
         {
             std::cerr << filePath << ':' << lineNumber << ": " << reason << '\n';
-            return std::vector<AcornData::MeshData>{};              // returns an empty vector to whoever called LoadModel()
+            return std::vector<AcornData::CpuMeshData>{};              // returns an empty vector to whoever called LoadModel()
         };
         
         // Read one line from the file per iteration, including blank lines.
@@ -1751,9 +1772,10 @@ namespace OBJ_Loader
                 auto& values = record == "v" ? temp_positions : temp_normals;
                 values.push_back(value);
             }
-            else if (record == "vt")                                // expects two numbers to follow this sign
+            else if (record == "vt")                                // expects two numbers to follow this sign      (or one number if one-dimensional texture) 
             {
-                // U is required. V starts at zero and can be omitted.
+                // U is required. A vt entry supplies U and may omit V. Store an omitted V as 0 before flipping.
+                // OBJ supports one-dimensional textures.
                 glm::vec2 uv{0.0f};
                 if (!(fields >> uv.x))
                 {
@@ -1783,7 +1805,13 @@ namespace OBJ_Loader
                 // Resolve the corner references and append vertices and triangle indices.
                 if (!AppendFace(fields, temp_positions, temp_uvs, temp_normals, mesh))
                 {
-                    return fail("Invalid face or index. Expected a triangle or quad.");
+                    if (skipInvalidFaces == false)
+                    {
+                        return fail("Invalid face or index. Expected a triangle or quad.");
+                    }
+                    
+                    std::cerr << filePath << ':' << lineNumber
+                              << ": Skipping invalid or unsupported face." << std::endl;              
                 }
             }
         }
@@ -1807,9 +1835,11 @@ namespace OBJ_Loader
     }
     
     
-    // Loads an OBJ with the custom parser, logs each mesh's size, and creates a GPU model.
-    // Call this after initializing OpenGL with a current context.
-    AcornData::Model UploadModel(const char* filePath, bool flipUVs = false)
+    // Loads an OBJ with the custom parser, logs the vertex and triangle counts for
+    // each mesh, and uploads the meshes as a GpuModel. Requires a current OpenGL context.
+    // If flipUVs is true, flips the V texture coordinate during import.
+    // If skipInvalidFaces is true, logs and skips rejected faces. Otherwise, aborts the import when a face is rejected.
+    AcornData::GpuModel UploadModel(const char* filePath, bool flipUVs = false, bool skipInvalidFaces = false)
     {
         // Show where the program resolves the path when diagnosing missing assets.
         std::cout << "Working directory: "
@@ -1820,7 +1850,7 @@ namespace OBJ_Loader
                   << std::boolalpha << std::filesystem::exists(filePath) << '\n';
         
         // reading all data and translating to the format my program use 
-        const std::vector<AcornData::MeshData> meshes = LoadMesh(filePath, flipUVs);
+        const std::vector<AcornData::CpuMeshData> meshes = LoadMesh(filePath, flipUVs, skipInvalidFaces);
         // extra info on what info was read: 
         for (const auto& mesh : meshes)
         {
@@ -1829,9 +1859,8 @@ namespace OBJ_Loader
                       << " triangles\n";
         }
         
-        // creating a model from the data 
-        AcornData::Model model = Rendering::CreateGpuModel(meshes);
-        return model;
+        // creating model from the data 
+        return Rendering::CreateGpuModel(meshes);
     }
     
 }
@@ -2193,9 +2222,9 @@ namespace Demo
     struct Testing_DefaultShapes 
     {
         using Transform = AcornData::Transform;
-        using MeshData = AcornData::MeshData;
+        using CpuMeshData = AcornData::CpuMeshData;
         using GpuMesh = AcornData::GpuMesh;
-        using RenderObject = AcornData::RenderObject;
+        using MeshInstance = AcornData::MeshInstance;
         
         
         // controlled by keyboard toggles.
@@ -2214,12 +2243,12 @@ namespace Demo
         }
         
         // preparing rendering objects  
-        MeshData pyramidData = BasicMeshes::MakePyramid_Basic();
-        MeshData cubeData = BasicMeshes::MakeCube_Basic();
-        MeshData sphereData = BasicMeshes::MakeBasicSphere();
+        CpuMeshData pyramidData = BasicMeshes::MakePyramid_Basic();
+        CpuMeshData cubeData = BasicMeshes::MakeCube_Basic();
+        CpuMeshData sphereData = BasicMeshes::MakeBasicSphere();
         
-        MeshData pyramidData_v2 = BasicMeshes::MakeDefaultPyramid();
-        MeshData cubeData_v2 = BasicMeshes::MakeDefaultCube();
+        CpuMeshData pyramidData_v2 = BasicMeshes::MakeDefaultPyramid();
+        CpuMeshData cubeData_v2 = BasicMeshes::MakeDefaultCube();
         
         
         GpuMesh pyramidGpu = Rendering::CreateGpuMesh(pyramidData);
@@ -2228,24 +2257,24 @@ namespace Demo
         
         GpuMesh pyramidGp_v2 = Rendering::CreateGpuMesh(pyramidData_v2);
         GpuMesh cubeGpu_v2 = Rendering::CreateGpuMesh(cubeData_v2);
-    
+        
     
         // making object instances
-        RenderObject basicPyramid_1{&pyramidGpu, Transform{glm::vec3(-4.0f, 0.0f, 1.0f)}};
-        RenderObject basicPyramid_2{&pyramidGpu, Transform{glm::vec3(-4.0f, 0.0f, -2.5f), glm::vec3(180.0f, 0.0f, 0.0f)}, true, Palette::blue};
+        MeshInstance basicPyramid_1{&pyramidGpu, Transform{glm::vec3(-4.0f, 0.0f, 1.0f)}};
+        MeshInstance basicPyramid_2{&pyramidGpu, Transform{glm::vec3(-4.0f, 0.0f, -2.5f), glm::vec3(180.0f, 0.0f, 0.0f)}, true, Palette::blue};
         
-        RenderObject pyramid_V1{&pyramidGp_v2, Transform{glm::vec3(-4.0f, 0.0f, -6.0f)}};
-        RenderObject pyramid_manual{&pyramidGp_v2, Transform{glm::vec3(0.0f, 0.0f, 4.0f)}};
+        MeshInstance pyramid_V1{&pyramidGp_v2, Transform{glm::vec3(-4.0f, 0.0f, -6.0f)}};
+        MeshInstance pyramid_manual{&pyramidGp_v2, Transform{glm::vec3(0.0f, 0.0f, 4.0f)}};
     
         
-        RenderObject basicCube_1{&cubeGpu, Transform{glm::vec3(0.0f, 0.0f, 1.0f)}};
-        RenderObject basicCube_2{&cubeGpu, Transform{glm::vec3(0.0f, 0.0f, -2.5f)}, true, Palette::pink};
+        MeshInstance basicCube_1{&cubeGpu, Transform{glm::vec3(0.0f, 0.0f, 1.0f)}};
+        MeshInstance basicCube_2{&cubeGpu, Transform{glm::vec3(0.0f, 0.0f, -2.5f)}, true, Palette::pink};
         
-        RenderObject cube_V2{&cubeGpu_v2, Transform{glm::vec3(0.0f, 0.0f, -7.0f)}};
+        MeshInstance cube_V2{&cubeGpu_v2, Transform{glm::vec3(0.0f, 0.0f, -7.0f)}};
         
         
-        RenderObject sphere_1{&sphereGpu, Transform{glm::vec3(3.0f, 0.0f, -1.0f)}};
-        RenderObject sphere_2{&sphereGpu, Transform{glm::vec3(4.5f, 0.0f, -2.5f)}, true, Palette::forestGreen};
+        MeshInstance sphere_1{&sphereGpu, Transform{glm::vec3(3.0f, 0.0f, -1.0f)}};
+        MeshInstance sphere_2{&sphereGpu, Transform{glm::vec3(4.5f, 0.0f, -2.5f)}, true, Palette::forestGreen};
     };
     
     
@@ -2422,23 +2451,26 @@ namespace Demo
     
     struct Testing_TwoBackpacks
     {
-        using Model = AcornData::Model;
+        using GpuModel = AcornData::GpuModel;
+        using ModelInstance = AcornData::ModelInstance;
         
         // controlled by keyboard toggles.
         GeometryRuntimeValues_Inputs runtime_Inputs{}; 
         GeometryRuntimeValues_Transforms runtime_Info{};
         
         
-        // loading model using assimp 
         const char* backpackPath = "models/backpack/backpack.obj";
         const char* backpackTexturePath = "models/backpack/diffuse.jpg";
         
-        
         // Left Backpack, using assimp loader
-        Model backpack_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(backpackPath); 
-        
+        GpuModel backpackGpu_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(backpackPath, true); 
         // right Backpack, using my loader
-        Model backpack_mine = OBJ_Loader::UploadModel(backpackPath, true);
+        GpuModel backpackGpu_mine = OBJ_Loader::UploadModel(backpackPath, true);
+        
+        
+        // Make instances of the models 
+        ModelInstance backpack_assimp{&backpackGpu_assimp};
+        ModelInstance backpack_mine{&backpackGpu_mine};
         
         
         Testing_TwoBackpacks()
@@ -2488,22 +2520,26 @@ namespace Demo
     
     struct Testing_TwoTeapots
     {
-        using Model = AcornData::Model;
+        using GpuModel = AcornData::GpuModel;
+        using ModelInstance = AcornData::ModelInstance;
         
         // controlled by keyboard toggles.
         GeometryRuntimeValues_Inputs runtime_Inputs{}; 
         GeometryRuntimeValues_Transforms runtime_Info{};
         
         
-        // loading model using assimp 
         const char* teapotPath = "models/teapot/teapot.obj";
         const char* teapotTexturePath = "models/teapot/default.png";
         
         // Left Backpack, using assimp loader
-        Model teapot_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(teapotPath); 
-        
+        GpuModel teapotGpu_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(teapotPath, true); 
         // right Backpack, using my loader
-        Model teapot_mine = OBJ_Loader::UploadModel(teapotPath, true);
+        GpuModel teapotGpu_mine = OBJ_Loader::UploadModel(teapotPath, true, true);
+        
+        
+        // Make instances of the models 
+        ModelInstance teapot_assimp{&teapotGpu_assimp}; 
+        ModelInstance teapot_mine{&teapotGpu_mine}; 
         
         
         Testing_TwoTeapots()
@@ -2556,24 +2592,28 @@ namespace Demo
     
     struct Testing_TwoIpshead
     {
-        using Model = AcornData::Model;
+        using GpuModel = AcornData::GpuModel;
+        using ModelInstance = AcornData::ModelInstance;
         
         // controlled by keyboard toggles.
         GeometryRuntimeValues_Inputs runtime_Inputs{}; 
         GeometryRuntimeValues_Transforms runtime_Info{};
         
         
-        // loading model using assimp 
-        const char* lpsheadPath = "models/lpshead/head.obj";               // might be "models/lpshead/head.OBJ"
+        const char* lpsheadPath = "models/lpshead/head.obj";               
         const char* lpsheadTexturePath = "models/lpshead/rendered.jpg";
         //const char* lpsheadTexturePath = "models/lpshead/lambertian.jpg";
         
-        
         // Left Backpack, using assimp loader
-        Model lpshead_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(lpsheadPath); 
-        
+        GpuModel lpsheadGpu_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(lpsheadPath, true); 
         // right Backpack, using my loader
-        Model lpshead_mine = OBJ_Loader::UploadModel(lpsheadPath, true);
+        GpuModel lpsheadGpu_mine = OBJ_Loader::UploadModel(lpsheadPath, true, true);
+        
+        
+        // Make instances of the models 
+        ModelInstance lpshead_assimp{&lpsheadGpu_assimp}; 
+        ModelInstance lpshead_mine{&lpsheadGpu_mine}; 
+        
         
         
         Testing_TwoIpshead()
@@ -2626,23 +2666,27 @@ namespace Demo
     
     struct Testing_TwoCubes
     {
-        using Model = AcornData::Model;
+        using GpuModel = AcornData::GpuModel;
+        using ModelInstance = AcornData::ModelInstance;
         
         // controlled by keyboard toggles.
         GeometryRuntimeValues_Inputs runtime_Inputs{}; 
         GeometryRuntimeValues_Transforms runtime_Info{};
         
         
-        // loading model using assimp 
         const char* cubePath = "models/cube/cube.obj";
         const char* cubeTexturePath = "models/cube/default.png";
         
-        
         // Left Backpack, using assimp loader
-        Model cube_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(cubePath); 
-        
+        GpuModel cubeGpu_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(cubePath, true); 
         // right Backpack, using my loader
-        Model cube_mine = OBJ_Loader::UploadModel(cubePath, true);
+        GpuModel cubeGpu_mine = OBJ_Loader::UploadModel(cubePath, true);
+        
+        
+        // Make instances of the models 
+        ModelInstance cube_assimp{&cubeGpu_assimp}; 
+        ModelInstance cube_mine{&cubeGpu_mine}; 
+        
         
         
         Testing_TwoCubes()
@@ -2695,23 +2739,27 @@ namespace Demo
     
     struct Testing_TwoPines
     {
-        using Model = AcornData::Model;
+        using GpuModel = AcornData::GpuModel;
+        using ModelInstance = AcornData::ModelInstance;
         
         // controlled by keyboard toggles.
         GeometryRuntimeValues_Inputs runtime_Inputs{}; 
         GeometryRuntimeValues_Transforms runtime_Info{};
         
         
-        // loading model using assimp 
         const char* pinePath = "models/pine/scrubPine.obj";
         const char* pineTexturePath = "models/pine/LushPine.png";
         
-        
         // Left Backpack, using assimp loader
-        Model pine_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(pinePath); 
-        
+        GpuModel pineGpu_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(pinePath, true); 
         // right Backpack, using my loader
-        Model pine_mine = OBJ_Loader::UploadModel(pinePath, true);
+        GpuModel pineGpu_mine = OBJ_Loader::UploadModel(pinePath, true);
+        
+        
+        // Make instances of the models 
+        ModelInstance pine_assimp{&pineGpu_assimp}; 
+        ModelInstance pine_mine{&pineGpu_mine}; 
+        
         
         
         Testing_TwoPines()
@@ -2764,23 +2812,27 @@ namespace Demo
     
     struct Testing_TwoSportCars
     {
-        using Model = AcornData::Model;
+        using GpuModel = AcornData::GpuModel;
+        using ModelInstance = AcornData::ModelInstance;
         
         // controlled by keyboard toggles.
         GeometryRuntimeValues_Inputs runtime_Inputs{}; 
         GeometryRuntimeValues_Transforms runtime_Info{};
         
         
-        // loading model using assimp 
         const char* sportCarsPath = "models/sportsCar/sportsCar.obj";
-        //const char* sportCarTexturePath = "models/sportsCar/";        // no texture
-        
+        // no texture
         
         // Left Backpack, using assimp loader
-        Model sportCar_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(sportCarsPath); 
-        
+        GpuModel sportCarGpu_assimp = OBJ_Loader_Assimp::UploadModel_Assimp(sportCarsPath, true); 
         // right Backpack, using my loader
-        Model sportCar_mine = OBJ_Loader::UploadModel(sportCarsPath, true);
+        GpuModel sportCarGpu_mine = OBJ_Loader::UploadModel(sportCarsPath, true, true);
+        
+        
+        // Make instances of the models 
+        ModelInstance sportCar_assimp{&sportCarGpu_assimp}; 
+        ModelInstance sportCar_mine{&sportCarGpu_mine}; 
+        
         
         
         Testing_TwoSportCars()
@@ -2853,10 +2905,10 @@ int main(int argc, char **argv) {
     
     using AcornData::Transform;
     using AcornData::Vertex;
-    using AcornData::MeshData;
+    using AcornData::CpuMeshData;
     using AcornData::GpuMesh;
-    using AcornData::RenderObject; 
-    using AcornData::Model; 
+    using AcornData::MeshInstance; 
+    using AcornData::ModelInstance; 
     
     
     std::cout << "hello world!" << '\n';   // std::endl;
@@ -2963,7 +3015,7 @@ int main(int argc, char **argv) {
     Demo::Testing_TwoPines twoPines {};
     Demo::Testing_TwoSportCars twoSportCars {};
     
-    int selectedTest = static_cast<int>(Demo::TestScene::Backpacks);
+    int selectedTest = static_cast<int>(Demo::TestScene::DefaultShapes);
     
     bool useBlackBackground = true;
     bool previousZeroDown = false;
@@ -3129,23 +3181,23 @@ int main(int argc, char **argv) {
     
     // Model cleanup
     //Rendering::DestroyGpuModel(backpack);    
-    Rendering::DestroyGpuModel(twoBackpacks.backpack_assimp);    
-    Rendering::DestroyGpuModel(twoBackpacks.backpack_mine);  
+    Rendering::DestroyGpuModel(twoBackpacks.backpackGpu_assimp);    
+    Rendering::DestroyGpuModel(twoBackpacks.backpackGpu_mine);  
     
-    Rendering::DestroyGpuModel(twoTeapots.teapot_assimp);    
-    Rendering::DestroyGpuModel(twoTeapots.teapot_mine);    
+    Rendering::DestroyGpuModel(twoTeapots.teapotGpu_assimp);    
+    Rendering::DestroyGpuModel(twoTeapots.teapotGpu_mine);    
     
-    Rendering::DestroyGpuModel(twoIpshead.lpshead_assimp);    
-    Rendering::DestroyGpuModel(twoIpshead.lpshead_mine);    
+    Rendering::DestroyGpuModel(twoIpshead.lpsheadGpu_assimp);    
+    Rendering::DestroyGpuModel(twoIpshead.lpsheadGpu_mine);    
     
-    Rendering::DestroyGpuModel(twoCubes.cube_assimp);    
-    Rendering::DestroyGpuModel(twoCubes.cube_mine);    
+    Rendering::DestroyGpuModel(twoCubes.cubeGpu_assimp);    
+    Rendering::DestroyGpuModel(twoCubes.cubeGpu_mine);    
     
-    Rendering::DestroyGpuModel(twoPines.pine_assimp);    
-    Rendering::DestroyGpuModel(twoPines.pine_mine);    
+    Rendering::DestroyGpuModel(twoPines.pineGpu_assimp);    
+    Rendering::DestroyGpuModel(twoPines.pineGpu_mine);    
     
-    Rendering::DestroyGpuModel(twoSportCars.sportCar_assimp);    
-    Rendering::DestroyGpuModel(twoSportCars.sportCar_mine);    
+    Rendering::DestroyGpuModel(twoSportCars.sportCarGpu_assimp);    
+    Rendering::DestroyGpuModel(twoSportCars.sportCarGpu_mine);    
     
     
     glDeleteProgram(shaderProgram.ID);

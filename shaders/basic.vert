@@ -44,7 +44,7 @@ void main()
     
     // some of my basic shapes don't really suport normals so doing it like this for now, will probably remove them later 
     Normal = vec3(0.0);
-
+    
     if (uUseLighting)
     {
         // transform normals from local-model space into world space 
@@ -53,4 +53,5 @@ void main()
     }
 }
 
-
+// Note: move normal calculatio to cpu? 
+// Note: look into calculating normals if missing? At face appending step, save normals for it.
