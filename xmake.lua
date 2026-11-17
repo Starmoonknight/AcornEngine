@@ -38,12 +38,13 @@ target("Acorn")
     -- Build an executable
     set_kind("binary")
     -- C++ source files to compile
-    add_files("src/*.cpp")
+    add_files("src/*.cpp", "src/geometry/*.cpp", "src/rendering/*.cpp", "src/assets/*.cpp")
     -- Headers to show in Ride
-    add_headerfiles("src/*.h", {install = false})
+    add_headerfiles("src/*.h", "src/geometry/*.h", "src/rendering/*.h", "src/assets/*.h", {install = false})
     add_headerfiles("inc/*.h", {install = false})
     -- Additional header search directory
-    add_includedirs("inc")
+    add_includedirs("inc", "src/geometry", "src/rendering", "src/assets")
+    add_includedirs("src")
     -- External libraries used by Acorn
     add_packages("glfw")
     add_packages("glm")
