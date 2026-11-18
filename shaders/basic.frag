@@ -9,11 +9,11 @@ out vec4 FragColor;
 
 
 uniform bool uColorOverride = false;
-uniform float uColorAmount = 1.0f;           // 0 = vertex color, 1 = solid color.
+uniform float uColorAmount = 1.0f;                  // 0 = vertex color, 1 = solid color.
 uniform vec3 uObjectColor = vec3(1.0);       
 
 uniform bool uUseTexture = false;
-uniform float uTintTextureColorAmount = 0.0f;    // 0 = texture RGB, 1 = chosen color.
+uniform float uTintTextureColorAmount = 0.0f;       // 0 = unchanged texture RGB, 1 = full calculated tint adjustment.
 uniform sampler2D uTexture2D;
 
 uniform bool uUseLighting = false; 

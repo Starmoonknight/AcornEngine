@@ -14,6 +14,106 @@
 #include <glm/glm.hpp>              // Vectors, matrices, dot and cross products
 
 
+namespace AcornData
+{
+    
+    void GpuMesh::Reset() noexcept
+    {
+        // Calling Reset() does not destroy the C++ object. The variable still exists and can later receive another upload through move assignment.
+        
+        // A zero handle means this object owns no resource in that field.
+        // For a nonzero handle, ask OpenGL to delete the named resource.
+        //
+        // 1 means "one resource".
+        // &vao supplies the address of the variable containing its handle.
+        if (vao != 0) glDeleteVertexArrays(1, &vao);
+        if (vertexVBO != 0) glDeleteBuffers(1, &vertexVBO);
+        if (colorVBO != 0) glDeleteBuffers(1, &colorVBO);
+        if (ebo != 0) glDeleteBuffers(1, &ebo);
+
+        // The OpenGL deletion functions do not reset the C++ variables, 
+        // forget the old handles so later cleanup does not delete them again.
+        vao = 0;
+        vertexVBO = 0;
+        colorVBO = 0;
+        ebo = 0;
+        
+        // This object now represents no drawable geometry.
+        index_count = 0;
+        
+        // Remove CPU-side face-range records.
+        // clear() removes elements; it does not release vector capacity.
+        faces.clear();
+        // An empty mesh has no available normal or UV attributes.
+        hasNormals = false;
+        hasUVs = false;
+    }
+
+    
+    void GpuMesh::TakeFrom(GpuMesh& other) noexcept
+    {
+        // Take each handle and replace the source's handle with zero.
+        // This transfers cleanup responsibility; it does not copy GPU data.
+        vao = std::exchange(other.vao, 0);
+        vertexVBO = std::exchange(other.vertexVBO, 0);
+        colorVBO = std::exchange(other.colorVBO, 0);
+        ebo = std::exchange(other.ebo, 0);
+
+        // Transfer the draw count and leave the source with nothing to draw.
+        index_count = std::exchange(other.index_count, 0);
+        
+        // Move the CPU-side face-range vector into this object.
+        faces = std::move(other.faces);
+        // Explicitly leave the source's face list empty.
+        other.faces.clear();
+
+        // Transfer attribute availability and clear the source's flags.
+        hasNormals = std::exchange(other.hasNormals, false);
+        hasUVs = std::exchange(other.hasUVs, false);
+    }
+    
+    
+    // Exactly one GpuMesh is responsible for deleting a buffer. 
+    // Moving transfers that responsibility, copying is forbidden.
+    GpuMesh::GpuMesh(GpuMesh&& other) noexcept
+    {
+        // Before this body runs, the field initializers should have already run:
+        // handles are 0, faces is empty, and flags are false.
+        //
+        // This new object therefore has no old GPU resources to release.
+        TakeFrom(other);
+    }
+
+    GpuMesh& GpuMesh::operator=(GpuMesh&& other) noexcept
+    {
+        // 'this' points to the receiving object.
+        // '&other' is the address of the source object.
+        //
+        // Do nothing if someone tries to move an object into itself.
+        if (this != &other)
+        {
+            // Release the resources this object already owns.
+            // Otherwise, their handles would be overwritten and lost.
+            Reset();
+            
+            // Receive the source's resources and leave the source empty.
+            TakeFrom(other);
+        }
+        
+        // Return the receiving object by reference.
+        return *this;
+    }
+
+    GpuMesh::~GpuMesh()
+    {
+        // Automatically release whatever this object still owns.
+        // An empty or moved-from object has no nonzero handles to delete.
+        Reset();
+    }
+    
+}
+
+
 
 namespace Rendering
 {
@@ -140,13 +240,8 @@ namespace Rendering
     
     void DestroyGpuMesh(AcornData::GpuMesh& mesh)
     {
-        glDeleteVertexArrays(1, &mesh.vao);
-
-        glDeleteBuffers(1, &mesh.vertexVBO);
-        glDeleteBuffers(1, &mesh.colorVBO);
-        glDeleteBuffers(1, &mesh.ebo);
-
-        mesh = AcornData::GpuMesh{};
+        // Explicit early cleanup uses the same implementation as destruction.
+        mesh.Reset();  
     }
     
     
@@ -162,14 +257,18 @@ namespace Rendering
 
         return gpuModel;
     }
-    
+
+    AcornData::GpuModel CreateGpuModel(const AcornData::CpuMeshData& mesh, GLenum usage)
+    {
+        AcornData::GpuModel result;
+        result.meshes.push_back(CreateGpuMesh(mesh, usage));
+        return result;
+    }
+
     void DestroyGpuModel(AcornData::GpuModel& model)
     {
-        for (auto& mesh : model.meshes)
-        {
-            DestroyGpuMesh(mesh);
-        }
-
+        // Destroy all mesh elements, releasing their GPU resources.
+        // The model object remains alive with an empty vector.
         model.meshes.clear();
     }
     

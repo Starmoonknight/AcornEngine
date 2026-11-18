@@ -1,4 +1,4 @@
-#include "AssimpLoader.h"
+#include "assets/AssimpLoader.h"
 
 
 // Standard library

@@ -5,9 +5,6 @@ add_rules("plugin.vsxmake.autoupdate")
 set_project("Acorn")
 
 
--- add_requires("libsdl3")   -- More advanced than glfw? look at later
-add_requires("glfw")
-add_requires("glm 1.0.3")
 
 -- OpenGL Version
 local GL_MAJOR_VERSION = 4
@@ -20,6 +17,13 @@ local glad_extensions = {
 -- OpenGL Loader
 local gl_api = "gl=" .. GL_MAJOR_VERSION .. "." .. GL_MINOR_VERSION
 
+
+
+-- External dependencies
+-- add_requires("libsdl3")   -- More advanced than glfw? look at later
+add_requires("glfw")
+add_requires("glm 1.0.3")
+add_requires("assimp")
 add_requires("glad v0.1.36", {configs = {
     spec = "gl",
     api = gl_api,
@@ -29,8 +33,7 @@ add_requires("glad v0.1.36", {configs = {
     loader = true,
 }})
 
--- External dependencies
-add_requires("glfw", "glm", "assimp")
+
 
 target("Acorn")
     -- C++ language version
@@ -38,12 +41,12 @@ target("Acorn")
     -- Build an executable
     set_kind("binary")
     -- C++ source files to compile
-    add_files("src/*.cpp", "src/geometry/*.cpp", "src/rendering/*.cpp", "src/assets/*.cpp")
+    add_files("src/**.cpp")                 -- ** is for recursive matching and should include everything in sub-folders 
     -- Headers to show in Ride
-    add_headerfiles("src/*.h", "src/geometry/*.h", "src/rendering/*.h", "src/assets/*.h", {install = false})
+    add_headerfiles("src/**.h", {install = false})
     add_headerfiles("inc/*.h", {install = false})
     -- Additional header search directory
-    add_includedirs("inc", "src/geometry", "src/rendering", "src/assets")
+    add_includedirs("inc")
     add_includedirs("src")
     -- External libraries used by Acorn
     add_packages("glfw")

@@ -61,7 +61,8 @@ namespace Rendering
     
     void DrawModel(
         const ShaderProgram& shaderProgram, const glm::mat4& view, const glm::mat4& projection, 
-        const AcornData::ModelInstance& model, const glm::mat4 modelMatrix, GLuint modelTexture);
+        const AcornData::ModelInstance& model, const glm::mat4& modelMatrix, 
+        GLuint modelTexture, bool lightingRequested = false, float colorAmount = 1.0f, float textureColorTintAmount = 0.0f);
     
 }
 

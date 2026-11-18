@@ -2,7 +2,7 @@
 
 
 // Project headers
-#include "CpuMeshData.h" 
+#include "geometry/CpuMeshData.h" 
 
 // Standard library
 #include <vector>       // Mesh data and temporary OBJ attribute lists

@@ -133,7 +133,8 @@ namespace Rendering
     
     void DrawModel(
         const ShaderProgram& shaderProgram, const glm::mat4& view, const glm::mat4& projection, 
-        const AcornData::ModelInstance& model, const glm::mat4 modelMatrix, GLuint modelTexture)
+        const AcornData::ModelInstance& model, const glm::mat4& modelMatrix, 
+        GLuint modelTexture, bool lightingRequested, float colorAmount, float textureColorTintAmount)
     {
         if (model.gpuModel == nullptr)
         {
@@ -149,13 +150,14 @@ namespace Rendering
         for (const auto& mesh : model.gpuModel->meshes)
         {
             const bool useTexture = mesh.hasUVs && modelTexture != 0;
+            const bool useLighting = lightingRequested && mesh.hasNormals;
             
             SetBasicShaderUniforms(
                 shaderProgram, modelMatrix, view, projection,
-                model.overrideColor, model.solidColor, 1.0f, useTexture, 0.0f
+                model.overrideColor, model.solidColor, colorAmount, useTexture, textureColorTintAmount
             );
             
-            shaderProgram.SetBool("uUseLighting", mesh.hasNormals);
+            shaderProgram.SetBool("uUseLighting", useLighting);
             DrawMesh(mesh);
         }
     }
