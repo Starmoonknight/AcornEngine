@@ -3,12 +3,14 @@
 #include "assets/ModelUpload.h"
 #include "geometry/BasicMeshes.h"
 #include "geometry/CpuMeshData.h"
+#include "rendering/Camera.h"
 #include "rendering/OpenGLErrors.h"
 #include "rendering/GpuModel.h"
 #include "rendering/Renderer.h"
 #include "rendering/RenderInstances.h"
 #include "rendering/ShaderProgram.h" 
 #include "Palette.h" 
+
 
 
 // Standard library
@@ -39,6 +41,7 @@ namespace
     
     constexpr float nearPlane = 0.1f;
     constexpr float farPlane = 100.0f;
+    constexpr float FOV = 70.0f;
     
     constexpr glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     
@@ -858,6 +861,17 @@ namespace Demo
         return glm::lookAt(cameraPosition, target, cameraUp);
     }
     
+    void UpdateCameraPos(GLFWwindow* window, Rendering::CameraData& cameraData, float cameraSpeed)
+    {        
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+            cameraData.cameraPosition += cameraSpeed * cameraData.cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            cameraData.cameraPosition -= cameraSpeed * cameraData.cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            cameraData.cameraPosition -= glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+            cameraData.cameraPosition += glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;        
+    }
     
     
     
@@ -1305,7 +1319,7 @@ namespace Demo
     
     
     
-    enum class TestScene
+    enum class TestSceneObjects
     {
         DefaultShapes = 1,
         Backpacks = 2,
@@ -1331,7 +1345,6 @@ int main(int argc, char **argv) {
     using AcornData::Transform;
     using AcornData::Vertex;
     using AcornData::CpuMeshData;
-    using AcornData::GpuMesh;
     using AcornData::ModelInstance; 
     
     
@@ -1409,6 +1422,8 @@ int main(int argc, char **argv) {
         renderSettings.bPerspectiveView = true; 
         
         
+        
+        /*
         // camera, perspective 
         glm::mat4 view = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
@@ -1418,7 +1433,7 @@ int main(int argc, char **argv) {
         glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
         
         view = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
-        
+        */
         
         
         
@@ -1428,6 +1443,16 @@ int main(int argc, char **argv) {
         float sunAngleDegrees = 0.0f;
         float cameraAngleDegrees = 0.0f;
         
+        const float cameraSpeed = 0.05f;
+        
+        Rendering::CameraData cameraData = Rendering::CameraData{
+            nearPlane, farPlane, FOV, 
+            static_cast<float>(frameBufferWidth) / static_cast<float>(frameBufferHeight),
+            Rendering::PROJECTION,
+            glm::vec3(0.0f, 1.0f, 0.0f), 
+            glm::vec3(0.0f),
+            glm::vec3(4.0f, 5.0f, 7.0f)
+        };
         
         
         // preparing rendering objects, week2 shapes  
@@ -1443,7 +1468,7 @@ int main(int argc, char **argv) {
         Demo::Testing_TwoPines twoPines {};
         Demo::Testing_TwoSportCars twoSportCars {};
         
-        int selectedTest = static_cast<int>(Demo::TestScene::DefaultShapes);
+        int selectedTest = static_cast<int>(Demo::TestSceneObjects::DefaultShapes);
         
         bool useBlackBackground = true;
         bool previousZeroDown = false;
@@ -1494,14 +1519,18 @@ int main(int argc, char **argv) {
                 static_cast<float>(frameBufferWidth) / 
                 static_cast<float>(frameBufferHeight);
             
+            cameraData.aspectRatio = aspectRatio;
+            
             
             if (renderSettings.bPerspectiveView)
             {
-                projection = glm::perspective(glm::radians(70.0f), aspectRatio, nearPlane, farPlane);
+                //projection = glm::perspective(glm::radians(70.0f), aspectRatio, nearPlane, farPlane);
+                cameraData.perspective = Rendering::PROJECTION;
             }
             else
             {
-                projection = glm::ortho(-5.0f * aspectRatio, 5.0f * aspectRatio, -5.0f, 5.0f, nearPlane, farPlane);
+                //projection = glm::ortho(-5.0f * aspectRatio, 5.0f * aspectRatio, -5.0f, 5.0f, nearPlane, farPlane);
+                cameraData.perspective = Rendering::ORTHOGRAPHIC; 
             }
             
             
@@ -1511,7 +1540,10 @@ int main(int argc, char **argv) {
             shaderProgram.use(); 
             
             
-            view = Demo::SpinTheCamera(deltaTime, cameraAngleDegrees, cameraTarget);
+            //view = Demo::SpinTheCamera(deltaTime, cameraAngleDegrees, cameraTarget);
+            Demo::UpdateCameraPos(window, cameraData, cameraSpeed);
+            
+            
             
             //const glm::vec3 spinningSunDirection = Demo::SpinTheSun(deltaTime, sunAngleDegrees);
             //glUniform3fv(lightDirectionLocation, 1, glm::value_ptr(spinningSunDirection));
@@ -1538,54 +1570,54 @@ int main(int argc, char **argv) {
             else if (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS) selectedTest = 7;
             else if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS) selectedTest = 8;
 
-            switch (static_cast<Demo::TestScene>(selectedTest))
+            switch (static_cast<Demo::TestSceneObjects>(selectedTest))
             {
-            case Demo::TestScene::DefaultShapes:
+            case Demo::TestSceneObjects::DefaultShapes:
                 Demo::Update_TestingDefaultShapes(
-                    window, shaderProgram, basicShapes, deltaTime, view, projection,
+                    window, shaderProgram, basicShapes, deltaTime, cameraData.view, cameraData.projection,
                     testTexture_crate);
                 break;
 
-            case Demo::TestScene::Backpacks:
+            case Demo::TestSceneObjects::Backpacks:
                 Demo::Update_DrawTwoBackpacks(
-                    window, shaderProgram, twoBackpacks, deltaTime, view, projection);
+                    window, shaderProgram, twoBackpacks, deltaTime, cameraData.view, cameraData.projection);
                 break;
 
-            case Demo::TestScene::Teapots:
+            case Demo::TestSceneObjects::Teapots:
                 Demo::Update_DrawTwoTeapots(
-                    window, shaderProgram, twoTeapots, deltaTime, view, projection);
+                    window, shaderProgram, twoTeapots, deltaTime, cameraData.view, cameraData.projection);
                 break;
 
-            case Demo::TestScene::Cubes:
+            case Demo::TestSceneObjects::Cubes:
                 Demo::Update_DrawTwoCubes(
-                    window, shaderProgram, twoCubes, deltaTime, view, projection);
+                    window, shaderProgram, twoCubes, deltaTime, cameraData.view, cameraData.projection);
                 break;
 
-            case Demo::TestScene::Pines:
+            case Demo::TestSceneObjects::Pines:
                 Demo::Update_DrawTwoPines(
-                    window, shaderProgram, twoPines, deltaTime, view, projection);
+                    window, shaderProgram, twoPines, deltaTime, cameraData.view, cameraData.projection);
                 break;
 
-            case Demo::TestScene::SportCars:
+            case Demo::TestSceneObjects::SportCars:
                 Demo::Update_DrawTwoSportCars(
-                    window, shaderProgram, twoSportCars, deltaTime, view, projection);
+                    window, shaderProgram, twoSportCars, deltaTime, cameraData.view, cameraData.projection);
                 break;
 
-            case Demo::TestScene::Ipshead:
+            case Demo::TestSceneObjects::Ipshead:
                 Demo::Update_DrawTwoIpshead(
-                    window, shaderProgram, twoIpshead, deltaTime, view, projection);
+                    window, shaderProgram, twoIpshead, deltaTime, cameraData.view, cameraData.projection);
                 break;
                 
-                case Demo::TestScene::AllModels:
-                Demo::Update_DrawTwoBackpacks(window, shaderProgram, twoBackpacks, deltaTime, view, projection);
+                case Demo::TestSceneObjects::AllModels:
+                Demo::Update_DrawTwoBackpacks(window, shaderProgram, twoBackpacks, deltaTime, cameraData.view, cameraData.projection);
                 
-                Demo::Update_DrawTwoTeapots(window, shaderProgram, twoTeapots, deltaTime, view, projection);
-                Demo::Update_DrawTwoCubes(window, shaderProgram, twoCubes, deltaTime, view, projection);
+                Demo::Update_DrawTwoTeapots(window, shaderProgram, twoTeapots, deltaTime, cameraData.view, cameraData.projection);
+                Demo::Update_DrawTwoCubes(window, shaderProgram, twoCubes, deltaTime, cameraData.view, cameraData.projection);
                 
-                Demo::Update_DrawTwoPines(window, shaderProgram, twoPines, deltaTime, view, projection);
+                Demo::Update_DrawTwoPines(window, shaderProgram, twoPines, deltaTime, cameraData.view, cameraData.projection);
                 
-                Demo::Update_DrawTwoSportCars(window, shaderProgram, twoSportCars, deltaTime, view, projection);
-                Demo::Update_DrawTwoIpshead(window, shaderProgram, twoIpshead, deltaTime, view, projection);
+                Demo::Update_DrawTwoSportCars(window, shaderProgram, twoSportCars, deltaTime, cameraData.view, cameraData.projection);
+                Demo::Update_DrawTwoIpshead(window, shaderProgram, twoIpshead, deltaTime, cameraData.view, cameraData.projection);
                 break;
             }
             
