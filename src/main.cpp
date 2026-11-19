@@ -864,13 +864,13 @@ namespace Demo
     void UpdateCameraPos(GLFWwindow* window, Rendering::CameraData& cameraData, float cameraSpeed)
     {        
         if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
-            cameraData.cameraPosition += cameraSpeed * cameraData.cameraFront;
+            cameraData.position += cameraSpeed * cameraData.cameraFront;
         if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
-            cameraData.cameraPosition -= cameraSpeed * cameraData.cameraFront;
+            cameraData.position -= cameraSpeed * cameraData.cameraFront;
         if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
-            cameraData.cameraPosition -= glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;
+            cameraData.position -= glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;
         if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
-            cameraData.cameraPosition += glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;        
+            cameraData.position += glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;        
     }
     
     
@@ -1448,7 +1448,7 @@ int main(int argc, char **argv) {
         Rendering::CameraData cameraData = Rendering::CameraData{
             nearPlane, farPlane, FOV, 
             static_cast<float>(frameBufferWidth) / static_cast<float>(frameBufferHeight),
-            Rendering::PROJECTION,
+            Rendering::ProjectionType::PERSPECTIVE,
             glm::vec3(0.0f, 1.0f, 0.0f), 
             glm::vec3(0.0f),
             glm::vec3(4.0f, 5.0f, 7.0f)
@@ -1525,12 +1525,12 @@ int main(int argc, char **argv) {
             if (renderSettings.bPerspectiveView)
             {
                 //projection = glm::perspective(glm::radians(70.0f), aspectRatio, nearPlane, farPlane);
-                cameraData.perspective = Rendering::PROJECTION;
+                cameraData.perspective = Rendering::ProjectionType::PERSPECTIVE;
             }
             else
             {
                 //projection = glm::ortho(-5.0f * aspectRatio, 5.0f * aspectRatio, -5.0f, 5.0f, nearPlane, farPlane);
-                cameraData.perspective = Rendering::ORTHOGRAPHIC; 
+                cameraData.perspective = Rendering::ProjectionType::ORTHOGRAPHIC; 
             }
             
             
