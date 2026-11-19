@@ -75,8 +75,24 @@ namespace AcornMath
         return glm::degrees(glm::eulerAngles(normalizedOrientation));
     }
 
+    void YawLocal(glm::quat& orientation, float degrees)
+    {
+        RotateLocal(
+            orientation,
+            -degrees,
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+    }
     
-    
+    void YawLocal(glm::vec3& rotationDegrees, float degrees)
+    {
+        RotateLocal(
+            rotationDegrees,
+            glm::vec3(0.0f, -degrees, 0.0f)
+        );
+    }
+
+
     glm::vec3 GetWorldDirection(const glm::quat& orientation, const glm::vec3& localDirection)
     {
         assert(std::abs(glm::dot(orientation, orientation) - 1.0f) < 0.001f);
@@ -184,6 +200,7 @@ namespace AcornMath
     {
         assert(std::isfinite(angleDegrees) && IsFinite(unitAxis));
         assert(std::abs(glm::dot(unitAxis, unitAxis) - 1.0f) < 0.001f);
+        
         RotateLocal(orientation, glm::angleAxis(glm::radians(angleDegrees), unitAxis));
     }
     
@@ -212,6 +229,7 @@ namespace AcornMath
     {
         assert(std::isfinite(angleDegrees) && IsFinite(unitAxis));
         assert(std::abs(glm::dot(unitAxis, unitAxis) - 1.0f) < 0.001f);
+        
         RotateWorld(orientation, glm::angleAxis(glm::radians(angleDegrees), unitAxis));
     }
 

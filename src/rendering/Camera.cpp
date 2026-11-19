@@ -59,9 +59,50 @@ namespace Rendering
     }
     
     
+    void CameraData::ApplyLookDelta(const glm::vec2& lookDegrees)
+    {
+        assert( std::isfinite(lookDegrees.x) && std::isfinite(lookDegrees.y));
+
+        // The caller supplies positive X for right and positive Y for up.
+        const float horizontalDegrees = lookControls.invertHorizontal
+            ? -lookDegrees.x
+            : lookDegrees.x;
+
+        const float verticalDegrees = lookControls.invertVertical
+            ? -lookDegrees.y
+            : lookDegrees.y;
+
+        // Our -Z-forward camera turns right around negative local Y.
+        RotateLocalY(-horizontalDegrees);
+
+        // Positive local X pitches upward, using the updated axes.
+        RotateLocalX(verticalDegrees);
+    }
+    
+    
     
     // ---- Local Transform ----
+
     
+    void CameraData::RotateLocal(const glm::vec3& changeDegrees)
+    {
+        AcornMath::RotateLocal(orientation, changeDegrees);
+    }
+    
+    void CameraData::RotateLocal(const glm::quat& change)
+    {
+        AcornMath::RotateLocal(orientation, change);
+    }
+
+    void CameraData::TranslateLocal(const glm::vec3& displacement)
+    {
+        AcornMath::TranslateLocal(position, orientation, displacement);
+    }
+
+    void CameraData::RotateLocalX(float angleDegrees)
+    {
+        RotateLocal(glm::vec3(angleDegrees, 0.0f, 0.0f));
+    }
 
     void CameraData::TranslateLocalX(float distance)
     {
@@ -87,6 +128,10 @@ namespace Rendering
     {
         TranslateLocal(glm::vec3(0.0f, 0.0f, distance));
     }
+    
+    
+    
+    // ---- World Transform ----
 
     void CameraData::RotateWorld(const glm::vec3& changeDegrees)
     {
@@ -132,6 +177,10 @@ namespace Rendering
     {
         TranslateWorld(glm::vec3(0.0f, 0.0f, distance));
     }
+    
+    
+    
+    // ---- Info ----
 
     void CameraData::SetViewport(int x, int y, int width, int height)
     {
@@ -159,8 +208,11 @@ namespace Rendering
     
     
     
+    
     glm::mat4 BuildViewMatrix(const CameraData& camera)
     {
+        // glm::lookAtRH always builds a right-handed view matrix, glm::lookAtLH would build a left-handed 
+        // view matrix, and glm::lookAt(...)	Uses GLM's configured handedness; right-handed by default
         return glm::lookAtRH(camera.position, camera.position + camera.GetForward(), camera.GetUp());
     }
 

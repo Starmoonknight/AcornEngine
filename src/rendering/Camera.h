@@ -11,6 +11,7 @@
 namespace Rendering
 {
     
+    
     enum class ProjectionType
     {
         PERSPECTIVE,
@@ -48,6 +49,14 @@ namespace Rendering
     };
     
     
+    // Preferences applied only to look input, not to XYZ rotation setters/getters.
+    struct LookControlSettings
+    {
+        bool invertHorizontal = false;
+        bool invertVertical = false;
+    };
+    
+    
     // Pose and projection data; movement controllers can modify it through this API.
     // Forward=-Z, right=+X, up=+Y before rotation. Keep orientation unit length.
     // Derived directions and matrices are calculated on request, not cached.
@@ -56,17 +65,16 @@ namespace Rendering
         glm::vec3 position {0.0f, 0.0f, 5.0f};
         glm::quat orientation{1.0f, 0.0f, 0.0f, 0.0f};
         ProjectionSettings projectionSettings; 
+        LookControlSettings lookControls;
         Viewport viewport;
         
         
-        
-        const glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 cameraTarget = glm::vec3(0.0f);
-        
+        // Maybe add back later, but should probably be in the arm:
+        //glm::vec3 cameraTarget = glm::vec3(0.0f);
         
         
         // Default pose; viewport has no drawable area until configured.
-        CameraData();
+        CameraData() = default;
         // Initial position and optional XYZ rotation in degrees.
         explicit CameraData(const glm::vec3& startingPosition, const glm::vec3& startingRotationDegrees = glm::vec3(0.0f));
         // Same setup with named angles, mapped as pitch=X, yaw=Y, roll=Z.
@@ -75,14 +83,26 @@ namespace Rendering
         CameraData(const glm::vec3& startingPosition, const glm::quat& startingOrientation);    
         
         
-        // Returns the camera's world-space forward, including its current orientation.
+        // Returns this camera's own forward direction, expressed in world coordinates.
+        // Rotates its local forward axis (-Z) by its current orientation.
+        // Changes when the camera rotates; does not change when it moves.
         glm::vec3 GetForward() const;
-        // Returns the camera's world-space right, including roll.
+        
+        // Returns this camera's own right direction, expressed in world coordinates.
+        // Rotates its local right axis (+X) by its current orientation, including roll.
         glm::vec3 GetRight() const;
-        // Returns the camera's world-space up, including roll.
+        
+        // Returns this camera's own up direction, expressed in world coordinates.
+        // Rotates its local up axis (+Y) by its current orientation, including roll.
+        // This can differ from the fixed world-up direction (0, 1, 0).
         glm::vec3 GetUp() const;
-        // Returns equivalent XYZ Euler degrees; values may jump between representations.
+        
+        // Returns an XYZ Euler-angle description of the camera's orientation
+        // relative to the world axes, in degrees, using Rz * Ry * Rx.
+        // This is an orientation, not a direction vector.
+        // Equivalent orientations can produce different angle values.
         glm::vec3 GetRotationDegrees() const;
+        
         
         // Replaces rotation using positive-axis Rz * Ry * Rx Euler degrees.
         void SetRotationDegrees(const glm::vec3& rotationDegrees);
@@ -97,6 +117,13 @@ namespace Rendering
         // Returns false and preserves orientation for invalid/degenerate inputs.
         // Call repeatedly to track a target; this does not move/orbit the camera.
         bool LookAt(const glm::vec3& target, glm::vec3 upReference = glm::vec3(0, 1, 0));
+        
+        
+        // Adds a look change in degrees: X=rightward yaw, Y=upward pitch.
+        // Uses camera-local axes, including roll; horizontal yaw is applied first.
+        // Applies lookControls inversion preferences. Does not move the camera,
+        // reset roll, clamp pitch, or reinterpret the XYZ rotation methods.
+        void ApplyLookDelta(const glm::vec2& lookDegrees);
         
         
         // ---- Local Transform ----
@@ -158,7 +185,9 @@ namespace Rendering
         // Builds projection from current settings and viewport aspect ratio.
         glm::mat4 GetProjectionMatrix() const;
         
+        
     };
+    
     
     
     // Free-function equivalents of the camera's matrix getters.
@@ -168,43 +197,6 @@ namespace Rendering
     // Uses standard right-handed OpenGL depth [-1,+1], independent of GLM default macros.
     // Requires aspect>0, 0<near<far, 0<FOV<180, and positive orthographic height.
     glm::mat4 BuildProjectionMatrix(const ProjectionSettings& settings, float aspectRatio);
-    
-    
-    
-    
-    
-    // ----------------- Only notes below here ----------------- 
-    
-    
-    
-    glm::vec3 CalculateCameraFront(const CameraData& camera);
-    glm::vec3 CalculateCameraRight(const CameraData& camera);
-    glm::vec3 CalculateCameraUp(const CameraData& camera);
-    
-    glm::vec3 CalculateCameraForwardDirection(CameraData& camera);
-    
-    
-    
-    
-    /*
-    
-    void RefreshCameraData(CameraData& data)
-    {
-        // Direction from the camera toward its initial target.
-        glm::vec3 cameraFront = glm::normalize(data.cameraTarget - data.position);
-        // Camera's right direction, using the world's up direction.
-        glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, data.worldUp));
-        // Camera's up direction, perpendicular to its right and front.
-        glm::vec3 cameraUp = glm::cross(cameraRight, cameraFront);
-        
-        glm::mat4 view = glm::lookAt(data.position, data.position + cameraFront, cameraUp);
-        
-        glm::mat4 projection = (data.perspective == ProjectionType::PERSPECTIVE) 
-        ? glm::perspective(glm::radians(data.FOV), data.aspectRatio, data.nearPlane, data.farPlane)
-        : glm::ortho(-5.0f * data.aspectRatio, 5.0f * data.aspectRatio, -5.0f, 5.0f, data.nearPlane, data.farPlane);
-    }
-    
-    */
     
 }
 

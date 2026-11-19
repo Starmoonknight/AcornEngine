@@ -45,23 +45,21 @@ namespace AcornMath
     
     
     
+    // Adds rightward yaw for an orientation whose local forward is -Z and up is +Y.
+    void YawLocal(glm::quat& orientation, float degrees);
+
+    // Same operation for existing XYZ Euler storage; retains Euler limitations.
+    void YawLocal(glm::vec3& rotationDegrees, float degrees);
+    
+    
+    
+    
     // --------- --------- Direction --------- ---------  
     
     // Rotates a LOCAL vector into WORLD space. Requires a unit quaternion.
     // Vector length is preserved: a unit input yields a unit output.
     // A world-space vector must not be passed as though it were local.
     glm::vec3 GetWorldDirection(const glm::quat& orientation, const glm::vec3& localDirection);
-    
-    
-    
-    // if given local-up or world-up gives different answers.
-    // and if given local-forward or world-forward probably gives different answers.
-    // Need to explain how the inputs effect the output 
-    // 
-    // These assume normalized orientation and unit-length local directions, 
-    // should probably make that more explicit somehow.
-    
-    
     
     // Returns world-space forward after rotating the chosen local axis.
     // Quaternion input must be unit length; Euler input uses the XYZ convention.
