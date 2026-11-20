@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>         // Model, view, and projection transforms
           
 
+
 namespace
 {
     
@@ -29,17 +30,18 @@ namespace
         assert(std::isfinite(lengthSquared) && lengthSquared > 0.0f);
         return glm::normalize(value);
     }
-
-    // Returns a unit-length vector pointing in the same direction.
-    // Requires a finite, nonzero vector with a representable squared length.
-    // A zero vector has no direction and cannot be normalized.
+    
+    // Returns a unit vector pointing in the same direction.
+    // Requires finite components and a finite, nonzero squared length.
+    // Detects invalid input in assertion-enabled builds.
     glm::vec3 UnitDirection(const glm::vec3& value)
     {
         const float lengthSquared = glm::dot(value, value);
-        
-        // Catch non-finite components and zero length in assertion-enabled builds.
-        assert(IsFinite(value) && lengthSquared > 0.0f);
-        
+
+        assert(IsFinite(value));
+        assert(std::isfinite(lengthSquared));
+        assert(lengthSquared > 0.0f);
+
         return glm::normalize(value);
     }
     
@@ -70,30 +72,29 @@ namespace AcornMath
     glm::vec3 GetRotationXYZDegrees(const glm::quat& orientation)
     {
         // Requires a valid, nonzero quaternion.
-        const glm::quat normalizedOrientation = glm::normalize(orientation);
-        
+        const glm::quat normalizedOrientation = Normalized(orientation);
+
         return glm::degrees(glm::eulerAngles(normalizedOrientation));
     }
 
-    void YawLocal(glm::quat& orientation, float degrees)
+    glm::quat InterpolateOrientation(const glm::quat& start, const glm::quat& target, float progress)
     {
-        RotateLocal(
-            orientation,
-            -degrees,
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
-    }
-    
-    void YawLocal(glm::vec3& rotationDegrees, float degrees)
-    {
-        RotateLocal(
-            rotationDegrees,
-            glm::vec3(0.0f, -degrees, 0.0f)
-        );
+        assert(std::isfinite(progress));
+
+        const glm::quat normalizedStart = Normalized(start);
+        const glm::quat normalizedTarget = Normalized(target);
+
+        const float clampedProgress = glm::clamp(progress, 0.0f, 1.0f);
+
+        return Normalized(
+            glm::slerp(
+                normalizedStart,
+                normalizedTarget,
+                clampedProgress));
     }
 
 
-    glm::vec3 GetWorldDirection(const glm::quat& orientation, const glm::vec3& localDirection)
+    glm::vec3 RotateLocalVectorToWorld(const glm::quat& orientation, const glm::vec3& localDirection)
     {
         assert(std::abs(glm::dot(orientation, orientation) - 1.0f) < 0.001f);
         assert(IsFinite(localDirection));
@@ -105,7 +106,7 @@ namespace AcornMath
 
     glm::vec3 GetForwardDirection(const glm::quat& orientation, glm::vec3 localForward)
     {
-        return GetWorldDirection(orientation, localForward);
+        return RotateLocalVectorToWorld(orientation, localForward);
     }
 
     glm::vec3 GetForwardDirection(const glm::vec3& rotationDegrees, glm::vec3 localForward)
@@ -116,7 +117,7 @@ namespace AcornMath
     
     glm::vec3 GetRightDirection(const glm::quat& orientation, glm::vec3 localRight)
     {
-        return GetWorldDirection(orientation, localRight);
+        return RotateLocalVectorToWorld(orientation, localRight);
     }
 
     glm::vec3 GetRightDirection(const glm::vec3& rotationDegrees, glm::vec3 localRight)
@@ -127,7 +128,7 @@ namespace AcornMath
     
     glm::vec3 GetUpDirection(const glm::quat& orientation, glm::vec3 localUp)
     {
-        return GetWorldDirection(orientation, localUp);
+        return RotateLocalVectorToWorld(orientation, localUp);
     }
     
     glm::vec3 GetUpDirection(const glm::vec3& rotationDegrees, glm::vec3 localUp)
@@ -143,7 +144,7 @@ namespace AcornMath
     
     glm::vec3 GetUpDirection_FromForwardRight(const glm::vec3& forward, const glm::vec3& right)
     {
-        return UnitDirection(glm::cross(UnitDirection(right), UnitDirection(forward)));;
+        return UnitDirection(glm::cross(UnitDirection(right), UnitDirection(forward)));
     }
     
     glm::vec3 GetDirectionTo(const glm::vec3& position, const glm::vec3& target)
@@ -180,6 +181,25 @@ namespace AcornMath
         
         result = Normalized(glm::quatLookAtRH(forward, up));
         return true;        
+    }
+    
+    
+
+    void YawLocal(glm::quat& orientation, float degrees)
+    {
+        RotateLocal(
+            orientation,
+            -degrees,
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+    }
+    
+    void YawLocal(glm::vec3& rotationDegrees, float degrees)
+    {
+        RotateLocal(
+            rotationDegrees,
+            glm::vec3(0.0f, -degrees, 0.0f)
+        );
     }
     
     
@@ -249,7 +269,7 @@ namespace AcornMath
 
     void TranslateLocal(glm::vec3& position, const glm::quat& orientation, const glm::vec3& displacement)
     {
-        position += GetWorldDirection(orientation, displacement);
+        position += RotateLocalVectorToWorld(orientation, displacement);
     }
     
     void TranslateLocal(glm::vec3& position, const glm::vec3& rotationDegrees, const glm::vec3& displacement)
@@ -284,7 +304,7 @@ namespace AcornMath
     {
         return BuildModelMatrix(position, scale, MakeOrientationXYZ(rotationDegrees));
         
-        /*  Old model matrix rotation building part: 
+        /*  Old model matrix rotation building part, learning reference: 
          
         // Describe rotation around the X axis.
         glm::mat4 rotationMatrix_X = glm::rotate(

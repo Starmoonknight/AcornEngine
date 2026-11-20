@@ -286,6 +286,129 @@ namespace Demo
         };
     };
     
+    
+    
+    
+    glm::vec3 SpinTheSun(float deltaTime, float& sunAngleDegrees)
+    {
+        constexpr float sunSpeedDegreesPerSecond = 65.0f;
+
+        sunAngleDegrees += sunSpeedDegreesPerSecond * deltaTime;
+        sunAngleDegrees = std::fmod(sunAngleDegrees, 360.0f);
+
+        const glm::mat4 sunRotation = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(sunAngleDegrees),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        return glm::vec3(
+            sunRotation * glm::vec4(-1.0f, -0.6f, -0.3f, 0.0f)
+        );
+    }
+    
+    
+    glm::mat4 SpinTheCamera(float deltaTime, float& cameraAngleDegrees,
+                        const glm::vec3& target)
+    {
+        constexpr float cameraSpeedDegreesPerSecond = 20.0f;
+
+        cameraAngleDegrees += cameraSpeedDegreesPerSecond * deltaTime;
+        cameraAngleDegrees = std::fmod(cameraAngleDegrees, 360.0f);
+
+        const glm::mat4 orbitRotation = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(cameraAngleDegrees),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+
+        const glm::vec3 startingOffset(4.0f, 5.0f, 7.0f);
+        const glm::vec3 rotatedOffset =
+            glm::mat3(orbitRotation) * startingOffset;
+
+        const glm::vec3 cameraPosition = target + rotatedOffset;
+        const glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
+
+        return glm::lookAt(cameraPosition, target, cameraUp);
+    }
+    
+    
+    
+    void SetCameraOrbitPose(
+        Rendering::CameraData& camera,
+        const glm::vec3& target,
+        float angleDegrees,
+        glm::vec3 startingOffset)
+    {
+        const glm::mat4 orbitRotation = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(angleDegrees),
+            glm::vec3(0.0f, 1.0f, 0.0f));
+
+        const glm::vec3 rotatedOffset =
+            glm::mat3(orbitRotation) * startingOffset;
+
+        camera.SetPosition(target + rotatedOffset);
+
+        const bool aimed = camera.LookAt(
+            target,
+            glm::vec3(0.0f, 1.0f, 0.0f));
+
+        assert(aimed);
+    }
+    
+    
+    void UpdateOrbitingCamera(Rendering::CameraData& cameraData, const GeometryRenderSettings renderSettings, float deltaTime, 
+        const int frameBufferWidth, const int frameBufferHeight, float& cameraAngleDegrees, 
+        const glm::vec3& cameraTarget, glm::vec3 startingOffset, glm::mat4& view, glm::mat4& projection)
+    {
+        cameraData.SetViewport(
+        0, 0,
+        frameBufferWidth,
+        frameBufferHeight);
+
+        cameraData.projectionSettings.projectionType =
+            renderSettings.bPerspectiveView
+                ? Rendering::ProjectionType::PERSPECTIVE
+                : Rendering::ProjectionType::ORTHOGRAPHIC;
+
+        constexpr float orbitDegreesPerSecond = 20.0f;
+
+        cameraAngleDegrees = std::fmod(
+            cameraAngleDegrees + orbitDegreesPerSecond * deltaTime,
+            360.0f);
+        
+        Demo::SetCameraOrbitPose(
+            cameraData,
+            cameraTarget,
+            cameraAngleDegrees,
+            startingOffset);
+
+        glViewport(
+            0, 0,
+            frameBufferWidth,
+            frameBufferHeight);
+
+        
+        view = cameraData.GetViewMatrix();
+        projection = cameraData.GetProjectionMatrix();
+    }
+    
+    void UpdateCameraPos(GLFWwindow* window, Rendering::CameraData& cameraData, float cameraSpeed)
+    {        
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+            cameraData.position += cameraSpeed * cameraData.GetForward();
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            cameraData.position -= cameraSpeed * cameraData.GetForward();
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            cameraData.position -= glm::normalize(glm::cross(cameraData.GetForward(), cameraData.GetUp())) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+            cameraData.position += glm::normalize(glm::cross(cameraData.GetForward(), cameraData.GetUp())) * cameraSpeed;        
+    }
+    
+    
+    
+    
     struct GeometryRuntimeValues_Inputs
     {
         bool bPreviousPress_Space = false;
@@ -818,62 +941,6 @@ namespace Demo
     }
     
     
-    glm::vec3 SpinTheSun(float deltaTime, float& sunAngleDegrees)
-    {
-        constexpr float sunSpeedDegreesPerSecond = 65.0f;
-
-        sunAngleDegrees += sunSpeedDegreesPerSecond * deltaTime;
-        sunAngleDegrees = std::fmod(sunAngleDegrees, 360.0f);
-
-        const glm::mat4 sunRotation = glm::rotate(
-            glm::mat4(1.0f),
-            glm::radians(sunAngleDegrees),
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
-
-        return glm::vec3(
-            sunRotation * glm::vec4(-1.0f, -0.6f, -0.3f, 0.0f)
-        );
-    }
-    
-    
-    glm::mat4 SpinTheCamera(float deltaTime, float& cameraAngleDegrees,
-                        const glm::vec3& target)
-    {
-        constexpr float cameraSpeedDegreesPerSecond = 20.0f;
-
-        cameraAngleDegrees += cameraSpeedDegreesPerSecond * deltaTime;
-        cameraAngleDegrees = std::fmod(cameraAngleDegrees, 360.0f);
-
-        const glm::mat4 orbitRotation = glm::rotate(
-            glm::mat4(1.0f),
-            glm::radians(cameraAngleDegrees),
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
-
-        const glm::vec3 startingOffset(4.0f, 5.0f, 7.0f);
-        const glm::vec3 rotatedOffset =
-            glm::mat3(orbitRotation) * startingOffset;
-
-        const glm::vec3 cameraPosition = target + rotatedOffset;
-        const glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
-
-        return glm::lookAt(cameraPosition, target, cameraUp);
-    }
-    
-    void UpdateCameraPos(GLFWwindow* window, Rendering::CameraData& cameraData, float cameraSpeed)
-    {        
-        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
-            cameraData.position += cameraSpeed * cameraData.cameraFront;
-        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
-            cameraData.position -= cameraSpeed * cameraData.cameraFront;
-        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
-            cameraData.position -= glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;
-        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
-            cameraData.position += glm::normalize(glm::cross(cameraData.cameraFront, cameraData.cameraUp)) * cameraSpeed;        
-    }
-    
-    
     
     struct Testing_TwoBackpacks
     {
@@ -1333,6 +1400,8 @@ namespace Demo
     };
     
     
+    
+    
 }
 
 
@@ -1438,21 +1507,34 @@ int main(int argc, char **argv) {
         
         
         const GLint lightDirectionLocation = glGetUniformLocation(shaderProgram.ID, "ulightDirection");
-        
-        
         float sunAngleDegrees = 0.0f;
+        
+        
+        
+        // Testing camera 
+        const glm::vec3 cameraTarget(0.0f);
+        const glm::vec3 startingOffset(4.0f, 5.0f, 7.0f); 
+        
         float cameraAngleDegrees = 0.0f;
         
         const float cameraSpeed = 0.05f;
         
-        Rendering::CameraData cameraData = Rendering::CameraData{
-            nearPlane, farPlane, FOV, 
-            static_cast<float>(frameBufferWidth) / static_cast<float>(frameBufferHeight),
-            Rendering::ProjectionType::PERSPECTIVE,
-            glm::vec3(0.0f, 1.0f, 0.0f), 
-            glm::vec3(0.0f),
-            glm::vec3(4.0f, 5.0f, 7.0f)
-        };
+        Rendering::CameraData cameraData(glm::vec3(4.0f, 5.0f, 7.0f));
+        cameraData.projectionSettings.verticalFovDegrees = 70.0f;
+        cameraData.projectionSettings.orthographicHeight = 10.0f;
+        cameraData.projectionSettings.nearPlane = nearPlane;
+        cameraData.projectionSettings.farPlane = farPlane;
+
+        Demo::SetCameraOrbitPose(
+            cameraData,
+            cameraTarget,
+            cameraAngleDegrees,
+            startingOffset);
+        
+        glm::mat4 view;
+        glm::mat4 projection;
+        
+        
         
         
         // preparing rendering objects, week2 shapes  
@@ -1515,23 +1597,10 @@ int main(int argc, char **argv) {
                 continue;
             }
             
-            float aspectRatio = 
-                static_cast<float>(frameBufferWidth) / 
-                static_cast<float>(frameBufferHeight);
             
-            cameraData.aspectRatio = aspectRatio;
-            
-            
-            if (renderSettings.bPerspectiveView)
-            {
-                //projection = glm::perspective(glm::radians(70.0f), aspectRatio, nearPlane, farPlane);
-                cameraData.perspective = Rendering::ProjectionType::PERSPECTIVE;
-            }
-            else
-            {
-                //projection = glm::ortho(-5.0f * aspectRatio, 5.0f * aspectRatio, -5.0f, 5.0f, nearPlane, farPlane);
-                cameraData.perspective = Rendering::ProjectionType::ORTHOGRAPHIC; 
-            }
+            Demo::UpdateOrbitingCamera(cameraData, renderSettings, deltaTime, 
+                frameBufferWidth, frameBufferHeight, cameraAngleDegrees, 
+                cameraTarget, startingOffset, view, projection); 
             
             
             
@@ -1541,7 +1610,7 @@ int main(int argc, char **argv) {
             
             
             //view = Demo::SpinTheCamera(deltaTime, cameraAngleDegrees, cameraTarget);
-            Demo::UpdateCameraPos(window, cameraData, cameraSpeed);
+            //Demo::UpdateCameraPos(window, cameraData, cameraSpeed);
             
             
             
@@ -1553,6 +1622,7 @@ int main(int argc, char **argv) {
             
             
             //Demo::Update_TestingDefaultShapes(window, shaderProgram, basicShapes, deltaTime, view, projection, testTexture_crate);
+            
             
             
             
@@ -1574,50 +1644,50 @@ int main(int argc, char **argv) {
             {
             case Demo::TestSceneObjects::DefaultShapes:
                 Demo::Update_TestingDefaultShapes(
-                    window, shaderProgram, basicShapes, deltaTime, cameraData.view, cameraData.projection,
+                    window, shaderProgram, basicShapes, deltaTime, view, projection,
                     testTexture_crate);
                 break;
 
             case Demo::TestSceneObjects::Backpacks:
                 Demo::Update_DrawTwoBackpacks(
-                    window, shaderProgram, twoBackpacks, deltaTime, cameraData.view, cameraData.projection);
+                    window, shaderProgram, twoBackpacks, deltaTime, view, projection);
                 break;
 
             case Demo::TestSceneObjects::Teapots:
                 Demo::Update_DrawTwoTeapots(
-                    window, shaderProgram, twoTeapots, deltaTime, cameraData.view, cameraData.projection);
+                    window, shaderProgram, twoTeapots, deltaTime, view, projection);
                 break;
 
             case Demo::TestSceneObjects::Cubes:
                 Demo::Update_DrawTwoCubes(
-                    window, shaderProgram, twoCubes, deltaTime, cameraData.view, cameraData.projection);
+                    window, shaderProgram, twoCubes, deltaTime, view, projection);
                 break;
 
             case Demo::TestSceneObjects::Pines:
                 Demo::Update_DrawTwoPines(
-                    window, shaderProgram, twoPines, deltaTime, cameraData.view, cameraData.projection);
+                    window, shaderProgram, twoPines, deltaTime, view, projection);
                 break;
 
             case Demo::TestSceneObjects::SportCars:
                 Demo::Update_DrawTwoSportCars(
-                    window, shaderProgram, twoSportCars, deltaTime, cameraData.view, cameraData.projection);
+                    window, shaderProgram, twoSportCars, deltaTime, view, projection);
                 break;
 
             case Demo::TestSceneObjects::Ipshead:
                 Demo::Update_DrawTwoIpshead(
-                    window, shaderProgram, twoIpshead, deltaTime, cameraData.view, cameraData.projection);
+                    window, shaderProgram, twoIpshead, deltaTime, view, projection);
                 break;
                 
                 case Demo::TestSceneObjects::AllModels:
-                Demo::Update_DrawTwoBackpacks(window, shaderProgram, twoBackpacks, deltaTime, cameraData.view, cameraData.projection);
+                Demo::Update_DrawTwoBackpacks(window, shaderProgram, twoBackpacks, deltaTime, view, projection);
                 
-                Demo::Update_DrawTwoTeapots(window, shaderProgram, twoTeapots, deltaTime, cameraData.view, cameraData.projection);
-                Demo::Update_DrawTwoCubes(window, shaderProgram, twoCubes, deltaTime, cameraData.view, cameraData.projection);
+                Demo::Update_DrawTwoTeapots(window, shaderProgram, twoTeapots, deltaTime, view, projection);
+                Demo::Update_DrawTwoCubes(window, shaderProgram, twoCubes, deltaTime, view, projection);
                 
-                Demo::Update_DrawTwoPines(window, shaderProgram, twoPines, deltaTime, cameraData.view, cameraData.projection);
+                Demo::Update_DrawTwoPines(window, shaderProgram, twoPines, deltaTime, view, projection);
                 
-                Demo::Update_DrawTwoSportCars(window, shaderProgram, twoSportCars, deltaTime, cameraData.view, cameraData.projection);
-                Demo::Update_DrawTwoIpshead(window, shaderProgram, twoIpshead, deltaTime, cameraData.view, cameraData.projection);
+                Demo::Update_DrawTwoSportCars(window, shaderProgram, twoSportCars, deltaTime, view, projection);
+                Demo::Update_DrawTwoIpshead(window, shaderProgram, twoIpshead, deltaTime, view, projection);
                 break;
             }
             

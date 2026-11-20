@@ -49,6 +49,19 @@ namespace Rendering
         orientation = glm::normalize(newOrientation);
     }
 
+    bool CameraData::TrySetOrientation(const glm::quat& newOrientation)
+    {
+        const float lengthSquared = glm::dot(newOrientation, newOrientation);
+
+        if (!std::isfinite(lengthSquared) || lengthSquared <= 0.0f)
+        {
+            return false;
+        }
+
+        orientation = glm::normalize(newOrientation);
+        return true;
+    }
+    
     void CameraData::SetPosition(const glm::vec3& newPosition) { position = newPosition; }
 
     
@@ -61,21 +74,21 @@ namespace Rendering
     
     void CameraData::ApplyLookDelta(const glm::vec2& lookDegrees)
     {
-        assert( std::isfinite(lookDegrees.x) && std::isfinite(lookDegrees.y));
+        assert(std::isfinite(lookDegrees.x) && std::isfinite(lookDegrees.y));
 
         // The caller supplies positive X for right and positive Y for up.
         const float horizontalDegrees = lookControls.invertHorizontal
             ? -lookDegrees.x
             : lookDegrees.x;
-
+        
         const float verticalDegrees = lookControls.invertVertical
             ? -lookDegrees.y
             : lookDegrees.y;
 
-        // Our -Z-forward camera turns right around negative local Y.
-        RotateLocalY(-horizontalDegrees);
+        // Positive input means right; YawLocal performs the axis-sign conversion.
+        AcornMath::YawLocal(orientation, horizontalDegrees);
 
-        // Positive local X pitches upward, using the updated axes.
+        // Positive local-X rotation pitches toward the camera's own up.
         RotateLocalX(verticalDegrees);
     }
     
@@ -196,7 +209,8 @@ namespace Rendering
     float CameraData::GetAspectRatio() const
     {
         assert(HasValidViewport());
-        return static_cast<float>(viewport.width) / static_cast<float>(viewport.height);
+        
+        return Rendering::GetAspectRatio(viewport.width, viewport.height); 
     }
 
     glm::mat4 CameraData::GetViewMatrix() const { return BuildViewMatrix(*this); }
@@ -228,7 +242,7 @@ namespace Rendering
             case ProjectionType::PERSPECTIVE:
             {
                 assert(std::isfinite(settings.verticalFovDegrees));
-                assert(settings.verticalFovDegrees > 0.0f);     // assert(settings.verticalFovDegrees > 0.0f && settings.verticalFovDegrees < 180.0f);
+                assert(settings.verticalFovDegrees > 0.0f && settings.verticalFovDegrees < 180.0f);
                 return glm::perspective(
                     glm::radians(settings.verticalFovDegrees), 
                     aspectRatio, 
@@ -253,6 +267,17 @@ namespace Rendering
         
         assert(false && "Unknown projection type");
         return glm::mat4{1.0f};
+    }
+
+    float GetAspectRatio(int frameBufferWidth, int frameBufferHeight)
+    {
+        assert(frameBufferWidth > 0 && frameBufferHeight > 0);
+        
+        float aspectRatio = 
+                static_cast<float>(frameBufferWidth) / 
+                static_cast<float>(frameBufferHeight);
+        
+        return aspectRatio;
     }
     
     
