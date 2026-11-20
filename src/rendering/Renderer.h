@@ -11,18 +11,59 @@
 #include <glm/glm.hpp>                          // Vectors, matrices, dot and cross products
 
 
+
 namespace AcornData
 {
     
     struct GpuMesh;
-    struct ModelInstance;
+    struct RenderModelInstance;
     
+    
+    
+    
+    // unused for now
+    enum TextureType
+    {
+        Diffuse,
+        Specular,
+        Normal,
+    };
+    // unused for now
+    struct Texture {
+        GLuint id = 0;
+        TextureType type;   // type e.g. a diffuse or specular texture. 
+    };      
     
 }
 
 
+
+
+namespace Texture
+{
+    
+    GLuint LoadTexture2D(const char* filePath);
+    
+}
+
+
+
+
 namespace Rendering
-{    
+{
+    
+    struct CameraMatrices;
+    
+    
+    struct RenderSettings
+    {
+        bool wireframe = false;
+        bool cullFaces = true;
+    };
+    
+    
+    void ApplyRenderSettings(const RenderSettings& settings);
+    
     
     
     void SetBasicShaderUniforms_Placement(
@@ -55,17 +96,22 @@ namespace Rendering
     void DrawMesh(const AcornData::GpuMesh& mesh); 
     
     
+    // Note: 
+    // Currently will have to re-calculate the model matrix for each camera instead of once and then applied to each camera draw
+    void DrawModel(const ShaderProgram& shader, const CameraMatrices& viewMatrices, const AcornData::RenderModelInstance& model);
+    
+    
+    
+    
+    
+    
+    // This function is becoming obsolete with the new draw path, needs updating or will be removed 
     void DrawMesh_FaceColors(
         const ShaderProgram& shader, 
         const AcornData::GpuMesh& mesh,  
         const std::vector<glm::vec3>& faceColors);
     
     
-    
-    void DrawModel(
-        const ShaderProgram& shaderProgram, const glm::mat4& view, const glm::mat4& projection, 
-        const AcornData::ModelInstance& model, const glm::mat4& modelMatrix, 
-        GLuint modelTexture, bool lightingRequested = false, float colorAmount = 1.0f, float textureColorTintAmount = 0.0f);
     
 }
 

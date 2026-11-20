@@ -5,16 +5,74 @@
 #include "GpuModel.h"
 #include "OpenGLErrors.h"
 #include "RenderInstances.h"
+#include "Camera.h"
 
 // Third-party libraries
 #include <cstddef>                          // std::size_t and offsetof for vertex attributes
 #include <cassert>                          // assert checks
 #include <glm/gtc/type_ptr.hpp>             // glm::value_ptr for OpenGL uniforms
+#include "stb_image.h"
+
+
+namespace Texture
+{
+    
+    GLuint LoadTexture2D(const char* filePath)
+    {
+        int width = 0;
+        int height = 0;
+        int channelsInFile = 0;
+        
+        // Return four bytes per pixel (RGBA), regardless of the file's channels.  Should work with both .jpg and .png 
+        unsigned char *pixels = stbi_load(filePath, &width, &height, &channelsInFile, STBI_rgb_alpha);  
+        
+        if (!pixels)
+        {
+            std::cerr << "Failed to load texture: " << filePath << '\n';
+            return 0;
+        }
+        
+        GLuint textureID = 0;
+        glGenTextures(1, &textureID);  
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        
+        // set the texture wrapping/filtering options (on the currently bound texture object)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+        // load and generate the texture
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        
+        // releases the CPU-side pixel array returned by stbi_load() after glTexImage2D() has consumed the pixels for the OpenGL texture
+        stbi_image_free(pixels);
+
+        return textureID;
+    }
+    
+    
+}
 
 
 
 namespace Rendering
-{    
+{
+    
+    
+    void ApplyRenderSettings(const RenderSettings& settings)
+    {
+        glPolygonMode(
+            GL_FRONT_AND_BACK,
+            settings.wireframe ? GL_LINE : GL_FILL);
+
+        if (settings.cullFaces)
+            glEnable(GL_CULL_FACE);
+        else
+            glDisable(GL_CULL_FACE);
+    }
+    
     
     
     void SetBasicShaderUniforms_Placement(
@@ -78,6 +136,44 @@ namespace Rendering
         CheckOpenGLErrors("drawing mesh");
     }
     
+    
+    void DrawModel(const ShaderProgram& shader, const CameraMatrices& viewMatrices, const AcornData::RenderModelInstance& model)
+    {
+        
+        if (!model.renderSettings.visible || model.gpuModel == nullptr)
+        {
+            return;
+        }
+
+        const glm::mat4 modelMatrix = AcornMath::BuildModelMatrix(model.transform);
+        
+        const auto& settings = model.renderSettings;
+        
+        
+        shader.use();
+        glUniform1i(shader.GetBasicUniformLocations().textureLocation, 0);
+        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, model.textureID); 
+        
+        for (const auto& mesh : model.gpuModel->meshes)
+        {
+            const bool useTexture = mesh.hasUVs && model.textureID != 0;
+            const bool useLighting = settings.lightingRequested && mesh.hasNormals;
+            
+            SetBasicShaderUniforms(
+                shader, modelMatrix, viewMatrices.view, viewMatrices.projection,
+                settings.overrideColor, settings.tintColor, settings.colorTintAmount, useTexture, settings.tintTextureAmount
+            );
+            
+            shader.SetBool("uUseLighting", useLighting);
+            DrawMesh(mesh);
+        }
+    }
+    
+    
+    
+    
     void DrawMesh_FaceColors(
         const ShaderProgram& shader, 
         const AcornData::GpuMesh& mesh,  
@@ -129,38 +225,6 @@ namespace Rendering
         CheckOpenGLErrors("drawing mesh with different face colors");
     }
     
-    
-    
-    void DrawModel(
-        const ShaderProgram& shaderProgram, const glm::mat4& view, const glm::mat4& projection, 
-        const AcornData::ModelInstance& model, const glm::mat4& modelMatrix, 
-        GLuint modelTexture, bool lightingRequested, float colorAmount, float textureColorTintAmount)
-    {
-        if (model.gpuModel == nullptr)
-        {
-            return;
-        }
-        
-        shaderProgram.use();
-        glUniform1i(shaderProgram.GetBasicUniformLocations().textureLocation, 0);
-        
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, modelTexture); 
-        
-        for (const auto& mesh : model.gpuModel->meshes)
-        {
-            const bool useTexture = mesh.hasUVs && modelTexture != 0;
-            const bool useLighting = lightingRequested && mesh.hasNormals;
-            
-            SetBasicShaderUniforms(
-                shaderProgram, modelMatrix, view, projection,
-                model.overrideColor, model.solidColor, colorAmount, useTexture, textureColorTintAmount
-            );
-            
-            shaderProgram.SetBool("uUseLighting", useLighting);
-            DrawMesh(mesh);
-        }
-    }
     
 }
 

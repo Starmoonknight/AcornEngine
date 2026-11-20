@@ -299,7 +299,7 @@ namespace AcornMath
     }
     
     
-
+    
     glm::mat4 BuildModelMatrix(glm::vec3 position, glm::vec3 scale, glm::vec3 rotationDegrees)
     {
         return BuildModelMatrix(position, scale, MakeOrientationXYZ(rotationDegrees));

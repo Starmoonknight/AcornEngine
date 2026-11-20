@@ -1,6 +1,10 @@
 #pragma once
 
+
+// Project headers
 #include "AcornMath.h"
+
+
 
 // Third-party libraries
 #include <glm/glm.hpp>                          // Vectors, matrices, dot and cross products
@@ -11,12 +15,12 @@
 namespace Rendering
 {
     
-    
-    enum class ProjectionType
+    struct CameraMatrices
     {
-        PERSPECTIVE,
-        ORTHOGRAPHIC,
+        glm::mat4 view;
+        glm::mat4 projection;
     };
+    
     
     // is this best to have on camera or arm? 
     // Currently not in use
@@ -26,6 +30,13 @@ namespace Rendering
         FirstPerson_Follow,
         ThirdPerson_Orbit,
         FixedPosition,
+    };
+    
+    
+    enum class ProjectionType
+    {
+        PERSPECTIVE,
+        ORTHOGRAPHIC,
     };
     
     // Rectangle in framebuffer pixels, not logical window coordinates.
@@ -271,6 +282,10 @@ namespace Rendering
         // Requires a valid viewport and valid settings for the selected projection type.
         // Does not change OpenGL state.
         glm::mat4 GetProjectionMatrix() const;
+        // Calculates and returns the current view and projection matrices.
+        // Requires the same valid pose, viewport, and projection settings
+        // as GetViewMatrix() and GetProjectionMatrix().
+        [[nodiscard]] CameraMatrices GetMatrices() const;
         
     };
     

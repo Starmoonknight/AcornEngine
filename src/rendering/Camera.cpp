@@ -213,6 +213,7 @@ namespace Rendering
         return Rendering::GetAspectRatio(viewport.width, viewport.height); 
     }
 
+    
     glm::mat4 CameraData::GetViewMatrix() const { return BuildViewMatrix(*this); }
 
     glm::mat4 CameraData::GetProjectionMatrix() const
@@ -220,9 +221,15 @@ namespace Rendering
         return BuildProjectionMatrix(projectionSettings, GetAspectRatio());
     }
     
-    
-    
-    
+    CameraMatrices CameraData::GetMatrices() const
+    {
+        return  {
+            GetViewMatrix(),
+            GetProjectionMatrix(),
+        };
+    }
+
+
     glm::mat4 BuildViewMatrix(const CameraData& camera)
     {
         // glm::lookAtRH always builds a right-handed view matrix, glm::lookAtLH would build a left-handed 
