@@ -13,6 +13,7 @@
 
 // Standard library
 #include <cassert>      // assert 
+#include <chrono>       // For measuring application load time 
 #include <cmath>        // Scalar math for geometry and animation
 #include <iostream>     // std::cout and std::cerr for diagnostics
 #include <vector>       // Mesh data and temporary OBJ attribute lists
@@ -277,6 +278,13 @@ int main(int argc, char **argv) {
     using AcornData::RenderModelInstance; 
     
     
+    // Temp program time measurement 
+    const auto startupStart = std::chrono::steady_clock::now();
+
+    std::cerr << "[Startup] Entered main\n";
+    
+    
+    
     // ---- Setup Window ---- 
     
     std::cout << "hello world!" << '\n';   // std::endl;
@@ -334,6 +342,11 @@ int main(int argc, char **argv) {
         
         // ---- Loading Assets  ---- 
         
+        
+        // Temp program time measurement 
+        const auto assetsStart = std::chrono::steady_clock::now();
+        
+        
         // loading the testing-texture
         stbi_set_flip_vertically_on_load(true);     // changes stb's loading setting for subsequent loads
         
@@ -364,6 +377,17 @@ int main(int argc, char **argv) {
         Demo::Testing_TwoCubes twoCubes {};
         Demo::Testing_TwoPines twoPines {};
         Demo::Testing_TwoSportCars twoSportCars {};
+        
+        
+        
+        
+        // Temp program time measurement 
+        const auto assetsEnd = std::chrono::steady_clock::now();
+
+        std::cerr
+            << "[Startup] Asset setup: "
+            << std::chrono::duration<double>(assetsEnd - assetsStart).count()
+            << " seconds\n";
         
         
         
@@ -439,6 +463,8 @@ int main(int argc, char **argv) {
             sceneCamera.orbitAngleDegrees,
             sceneCamera.startingOffset);
         
+        const float cameraSpeed = 10.0f;
+        
         
         // Testing camera 
         /*
@@ -489,6 +515,16 @@ int main(int argc, char **argv) {
         bool useBlackBackground = true;
         bool previousZeroDown = false;
         
+        
+        
+        
+        
+        // Temp program time measurement 
+        std::cerr
+            << "[Startup] Ready for loop after "
+            << std::chrono::duration<double>(
+                   std::chrono::steady_clock::now() - startupStart).count()
+            << " seconds\n";
         
         
         
@@ -545,12 +581,15 @@ int main(int argc, char **argv) {
             }
             
             ConfigureSceneViewports(scene, framebuffer);
-            Demo::UpdateOrbitingCamera(sceneCamera, deltaTime); 
+            
+            
+            
+            //Demo::UpdateOrbitingCamera(sceneCamera, deltaTime); 
+            Demo::UpdateCameraPos(window, sceneCamera.camera, cameraSpeed, deltaTime);
             
             
             
             //view = Demo::SpinTheCamera(deltaTime, cameraAngleDegrees, cameraTarget);
-            //Demo::UpdateCameraPos(window, cameraData, cameraSpeed);
             
             
             

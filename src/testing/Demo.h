@@ -534,7 +534,11 @@ namespace Demo
     void UpdateOrbitingCamera(SceneCamera& camera, float deltaTime);
     
     
-    void UpdateCameraPos(GLFWwindow* window, Rendering::CameraData& cameraData, float cameraSpeed);
+    void UpdateCameraPos(
+        GLFWwindow* window, 
+        Rendering::CameraData& cameraData, 
+        float cameraSpeed, 
+        float deltaTime);
     
     
     

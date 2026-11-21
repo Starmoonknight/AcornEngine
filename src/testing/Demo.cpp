@@ -556,16 +556,33 @@ namespace Demo
    }
 
     
-    void UpdateCameraPos(GLFWwindow* window, Rendering::CameraData& cameraData, float cameraSpeed)
-   {        
+    void UpdateCameraPos(
+    GLFWwindow* window,
+    Rendering::CameraData& cameraData,
+    float speedUnitsPerSecond,
+    float deltaTime)
+   {
+       const float distance = speedUnitsPerSecond * deltaTime;
+
        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
-           cameraData.position += cameraSpeed * cameraData.GetForward();
+       {
+           cameraData.TranslateLocalZ(-distance); // Forward
+       }
+
        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
-           cameraData.position -= cameraSpeed * cameraData.GetForward();
+       {
+           cameraData.TranslateLocalZ(distance); // Backward
+       }
+
        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
-           cameraData.position -= glm::normalize(glm::cross(cameraData.GetForward(), cameraData.GetUp())) * cameraSpeed;
+       {
+           cameraData.TranslateLocalX(-distance); // Left
+       }
+
        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
-           cameraData.position += glm::normalize(glm::cross(cameraData.GetForward(), cameraData.GetUp())) * cameraSpeed;        
+       {
+           cameraData.TranslateLocalX(distance); // Right
+       }
    }
     
     
