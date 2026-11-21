@@ -403,12 +403,14 @@ int main(int argc, char **argv) {
         
         // ---- Camera ---- 
         
-        scene.cameras.resize(2);
-
+        scene.cameras.resize(4);
+        
         // Resizing or appending the vector can screw up saved references, if that were to 
         // happen the saved sceneCamera and secondCamera would need to be set again before use
         SceneCamera& sceneCamera = scene.cameras[0];
         SceneCamera& secondCamera = scene.cameras[1];
+        SceneCamera& thirdCamera = scene.cameras[2];
+        SceneCamera& fourthCamera = scene.cameras[3];
         
         // camera 1
         sceneCamera.camera.projectionSettings.projectionType = Rendering::ProjectionType::PERSPECTIVE; 
@@ -424,6 +426,8 @@ int main(int argc, char **argv) {
         secondCamera.startingOffset = sceneCamera.startingOffset;
         secondCamera.orbitAngleDegrees = 180.0f;
         secondCamera.backgroundColor = scene.settings.defaultBackgroundColor;
+        
+        thirdCamera.backgroundColor = Palette::pink;
         
         // update each camera transform to match starting values 
         for (SceneCamera& camera : scene.cameras)
@@ -470,7 +474,7 @@ int main(int argc, char **argv) {
         Demo::CarouselSettings carousel;
 
         carousel.layout =
-            Demo::SplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
+            Demo::SplitScreenSettings_Extra_Carousel::CarouselGridSplit;
 
         carousel.secondsPerLoop = 8.0f;
         
