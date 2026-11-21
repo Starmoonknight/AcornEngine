@@ -513,7 +513,7 @@ namespace Demo
     
     
     
-    
+    // later move to camera arm, when that exists  
     void SetCameraOrbitPose(
         Rendering::CameraData& camera,
         const glm::vec3& target,
@@ -538,7 +538,7 @@ namespace Demo
    }
     
     
-    
+    // later move to camera arm, when that exists  
     void UpdateOrbitingCamera(SceneCamera& camera, float deltaTime)
    {
        constexpr float orbitDegreesPerSecond = 20.0f;

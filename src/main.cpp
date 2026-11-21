@@ -70,12 +70,7 @@ namespace
     }
     */
     
-    
-    void framebufferSizeCallback(GLFWwindow* window, int width, int height)
-    {
-        glViewport(0, 0, width, height); 
-    }
-    
+        
     
     bool InitializeProgram()
     {
@@ -194,7 +189,7 @@ namespace
 
 namespace Demo
 {   
-    
+    // move to scene? 
     glm::vec3 SpinTheSun(float deltaTime, float& sunAngleDegrees)
     {
         constexpr float sunSpeedDegreesPerSecond = 65.0f;
@@ -212,32 +207,6 @@ namespace Demo
             sunRotation * glm::vec4(-1.0f, -0.6f, -0.3f, 0.0f)
         );
     }
-    
-    
-    
-    glm::mat4 SpinTheCamera(float deltaTime, float& cameraAngleDegrees, const glm::vec3& target)
-    {
-        constexpr float cameraSpeedDegreesPerSecond = 20.0f;
-
-        cameraAngleDegrees += cameraSpeedDegreesPerSecond * deltaTime;
-        cameraAngleDegrees = std::fmod(cameraAngleDegrees, 360.0f);
-
-        const glm::mat4 orbitRotation = glm::rotate(
-            glm::mat4(1.0f),
-            glm::radians(cameraAngleDegrees),
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
-
-        const glm::vec3 startingOffset(4.0f, 5.0f, 7.0f);
-        const glm::vec3 rotatedOffset =
-            glm::mat3(orbitRotation) * startingOffset;
-
-        const glm::vec3 cameraPosition = target + rotatedOffset;
-        const glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
-
-        return glm::lookAt(cameraPosition, target, cameraUp);
-    }
-    
     
     
     
@@ -300,21 +269,6 @@ int main(int argc, char **argv) {
         glfwTerminate();
         return -1;
     }
-    
-    
-    // ---- Setup Window Framebuffer Callback ---- 
-    
-    // NOTE: This works well for single camera use but maybe not for splitscreen. 
-    
-    // will supply the correct framebuffer height automatically and width on window resize 
-    // means that, whenever the framebuffer size changes, make rendering occupy its full area.
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-    
-    FramebufferSize framebuffer{};
-    
-    // set viewport once during setup, since registering the callback does not set it 
-    glfwGetFramebufferSize(window, &framebuffer.width, &framebuffer.height);
-    glViewport(0, 0, framebuffer.width, framebuffer.height);
     
     
     // ---- Setup Shader Program ---- 
@@ -396,6 +350,7 @@ int main(int argc, char **argv) {
         
         Scene scene;
         scene.SceneID = 0;
+        scene.settings.splitScreen = VerticalSplit;
         
         // face culling    
         Rendering::RenderSettings renderSettings {};
@@ -447,54 +402,42 @@ int main(int argc, char **argv) {
         
         // ---- Camera ---- 
         
+        scene.cameras.resize(2);
+
+        // Resizing or appending the vector can screw up saved references, if that were to 
+        // happen the saved sceneCamera and secondCamera would need to be set again before use
+        SceneCamera& sceneCamera = scene.cameras[0];
+        SceneCamera& secondCamera = scene.cameras[1];
         
-        scene.cameras.emplace_back();
-        
-        SceneCamera& sceneCamera = scene.cameras.front();
+        // camera 1
         sceneCamera.camera.projectionSettings.projectionType = Rendering::ProjectionType::PERSPECTIVE; 
         sceneCamera.camera.projectionSettings.verticalFovDegrees = 70.0f;
         sceneCamera.camera.projectionSettings.orthographicHeight = 10.0f;
         sceneCamera.camera.projectionSettings.nearPlane = 0.1f;
         sceneCamera.camera.projectionSettings.farPlane = 100.0f;
+        sceneCamera.backgroundColor = scene.settings.defaultBackgroundColor;
         
-        Demo::SetCameraOrbitPose(
-            sceneCamera.camera,
-            sceneCamera.target,
-            sceneCamera.orbitAngleDegrees,
-            sceneCamera.startingOffset);
+        // camera 2,  set up with camera 1 
+        secondCamera.camera.projectionSettings = sceneCamera.camera.projectionSettings;
+        
+        secondCamera.target = sceneCamera.target;
+        secondCamera.startingOffset = sceneCamera.startingOffset;
+        secondCamera.orbitAngleDegrees = 180.0f;
+        secondCamera.backgroundColor = glm::vec3(0.12f, 0.12f, 0.18f);
+        
+        // update each camera transform to match starting values 
+        for (SceneCamera& camera : scene.cameras)
+        {
+            Demo::SetCameraOrbitPose(
+                camera.camera,
+                camera.target,
+                camera.orbitAngleDegrees,
+                camera.startingOffset);
+        }
+        
+        
         
         const float cameraSpeed = 10.0f;
-        
-        
-        // Testing camera 
-        /*
-        const glm::vec3 cameraTarget(0.0f);
-        const glm::vec3 startingOffset(4.0f, 5.0f, 7.0f); 
-        
-        float cameraAngleDegrees = 0.0f;
-        const float cameraSpeed = 0.05f;
-        
-        Rendering::CameraData cameraData(glm::vec3(4.0f, 5.0f, 7.0f));
-        cameraData.projectionSettings.projectionType = Rendering::ProjectionType::PERSPECTIVE; 
-        cameraData.projectionSettings.verticalFovDegrees = 70.0f;
-        cameraData.projectionSettings.orthographicHeight = 10.0f;
-        cameraData.projectionSettings.nearPlane = nearPlane;
-        cameraData.projectionSettings.farPlane = farPlane;
-
-        Demo::SetCameraOrbitPose(
-            cameraData,
-            cameraTarget,
-            cameraAngleDegrees,
-            startingOffset);
-        
-        glm::mat4 view;
-        glm::mat4 projection;
-        */
-        
-        
-        
-        
-        
         
         
         
@@ -502,6 +445,10 @@ int main(int argc, char **argv) {
         
         FrameClock clock;
         clock.Reset(glfwGetTime());
+        
+        
+        FramebufferSize framebuffer{};
+        
         
         
         int selectedTest = static_cast<int>(Demo::TestSceneObjects::DefaultShapes);     // what models to show
@@ -514,6 +461,7 @@ int main(int argc, char **argv) {
         
         bool useBlackBackground = true;
         bool previousZeroDown = false;
+        
         
         
         
@@ -584,12 +532,16 @@ int main(int argc, char **argv) {
             
             
             
-            //Demo::UpdateOrbitingCamera(sceneCamera, deltaTime); 
-            Demo::UpdateCameraPos(window, sceneCamera.camera, cameraSpeed, deltaTime);
-            
-            
-            
-            //view = Demo::SpinTheCamera(deltaTime, cameraAngleDegrees, cameraTarget);
+            for (SceneCamera& camera : scene.cameras)
+            {
+                if (camera.enabled)
+                {
+                    Demo::UpdateOrbitingCamera(camera, deltaTime);
+                    
+                    //Demo::UpdateCameraPos(window, camera, cameraSpeed, deltaTime);
+                }
+            }
+                        
             
             
             

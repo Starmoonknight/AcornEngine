@@ -16,6 +16,7 @@ namespace Palette
     inline const glm::vec3 yellow      {1.0f,  1.0f,  0.0f};
 
     inline const glm::vec3 blue        {0.0f,  0.0f,  1.0f};
+    inline const glm::vec3 lightBlue   {0.678f, 0.847f, 0.902f};
     inline const glm::vec3 navy        {0.0f,  0.0f,  0.5f};
     inline const glm::vec3 cyan        {0.0f,  1.0f,  1.0f};
     inline const glm::vec3 teal        {0.0f,  0.5f,  0.5f};

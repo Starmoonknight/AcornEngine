@@ -6,6 +6,7 @@
 
 // Standard library
 #include <algorithm>
+#include <cmath>
 
 
 
@@ -18,8 +19,103 @@ namespace
     
     constexpr glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     
+    // For Vertical or Horizontal split screen 
+    void ConfigureStripViewports(
+        Scene& scene,
+        const FramebufferSize& framebuffer,
+        int enabledCount,
+        bool sideBySide)
+    {
+            
+        const int availablePixels = sideBySide
+            ? framebuffer.width
+            : framebuffer.height;
     
+        const int baseSize = availablePixels / enabledCount;
+        const int extraPixels = availablePixels % enabledCount;
     
+        int enabledIndex = 0;
+        int offset = 0;
+    
+        for (SceneCamera& sceneCamera : scene.cameras)
+        {
+            if (!sceneCamera.enabled)
+                continue;
+
+            const int size =
+                baseSize + (enabledIndex < extraPixels ? 1 : 0);
+
+            if (sideBySide)
+            {
+                sceneCamera.camera.SetViewport(
+                    offset, 0,
+                    size, framebuffer.height);
+            }
+            else
+            {
+                sceneCamera.camera.SetViewport(
+                    0, offset,
+                    framebuffer.width, size);
+            }
+
+            offset += size;
+            ++enabledIndex;
+        }    
+    }
+
+    
+    void ConfigureGridViewports(
+    Scene& scene,
+    const FramebufferSize& framebuffer,
+    int enabledCount)
+    {
+        // Prioritizes a roughly square number of cells in columns and rows 
+        
+        const int columns = static_cast<int>(
+            std::ceil(std::sqrt(static_cast<double>(enabledCount))));
+
+        // The integer formula for rows rounds division upward. Ordinary integer 
+        // division 3 / 2 would produce 1, but two rows are needed in that scenario.
+        const int rows = (enabledCount + columns - 1) / columns;
+
+        const int tileWidth = framebuffer.width / columns;
+
+        int enabledIndex = 0;
+
+        for (SceneCamera& sceneCamera : scene.cameras)
+        {
+            if (!sceneCamera.enabled)
+                continue;
+
+            const int row = enabledIndex / columns;
+            const int column = enabledIndex % columns;
+
+            const int camerasInRow = std::min(
+                columns,
+                enabledCount - row * columns);
+            
+            const int rowWidth = camerasInRow * tileWidth;
+            const int rowStartX = (framebuffer.width - rowWidth) / 2;
+
+            const int x = rowStartX + column * tileWidth;
+
+            // Number rows from the top, then convert to OpenGL's
+            // bottom-left framebuffer coordinates.
+            const int top =
+                framebuffer.height - row * framebuffer.height / rows;
+
+            const int bottom =
+                framebuffer.height - (row + 1) * framebuffer.height / rows;
+
+            sceneCamera.camera.SetViewport(
+                x,
+                bottom,
+                tileWidth,
+                top - bottom);
+
+            ++enabledIndex;
+        }
+    }
     
     
 }
@@ -53,10 +149,41 @@ void RemoveSceneModel(Scene& scene, AcornData::RenderModelInstance* model)
 
 void ConfigureSceneViewports(Scene& scene, const FramebufferSize& framebuffer)
 {
-    assert(scene.cameras.size() == 1);
+    
+    int enabledCount = 0;
+    
+    for (SceneCamera& sceneCamera : scene.cameras)
+    {
+        // Clear any rectangle left from the previous layout.
+        sceneCamera.camera.SetViewport(0, 0, 0, 0);
 
-    scene.cameras.front().camera.SetViewport(
-        0, 0, framebuffer.width, framebuffer.height);
+        // Only enabled cameras should receive space.
+        if (sceneCamera.enabled)
+            ++enabledCount;
+    }
+    
+    if (enabledCount == 0 || framebuffer.width <= 0 || framebuffer.height <= 0)
+    {
+        return;
+    }
+    
+    switch (scene.settings.splitScreen)
+    {
+    case VerticalSplit:
+        ConfigureStripViewports(
+            scene, framebuffer, enabledCount, true);
+        break;
+
+    case HorizontalSplit:
+        ConfigureStripViewports(
+            scene, framebuffer, enabledCount, false);
+        break;
+
+    case GridSplit:
+        ConfigureGridViewports(
+            scene, framebuffer, enabledCount);
+        break;
+    }    
 }
 
 
@@ -75,6 +202,17 @@ void UpdateScene(Scene& scene, float deltaTime)
 
 void DrawScene(const Scene& scene, const ShaderProgram& shader)
 {
+    // Establish a clean whole-frame background first.
+    // This also gives a defined result if every camera is disabled.
+    glDisable(GL_SCISSOR_TEST);
+    
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glEnable(GL_SCISSOR_TEST);
+    
+    
+    
     for (const SceneCamera& sceneCamera : scene.cameras)
     {
         if (!sceneCamera.enabled ||
@@ -85,15 +223,24 @@ void DrawScene(const Scene& scene, const ShaderProgram& shader)
         
         const Rendering::Viewport& viewport = sceneCamera.camera.viewport;
         
+        // Map this camera's image into its rectangle.
         glViewport(
-            viewport.x,
-            viewport.y,
-            viewport.width,
-            viewport.height);
+            viewport.x, viewport.y,
+            viewport.width, viewport.height);
         
+        // Restrict clearing and drawing to the same rectangle.
+        glScissor(
+            viewport.x, viewport.y,
+            viewport.width, viewport.height);
+        
+        // Set the background color saved in this camera 
         const glm::vec3& background = sceneCamera.backgroundColor;
+        glClearColor(
+            background.r,
+            background.g,
+            background.b,
+            1.0f);
         
-        glClearColor(background.r, background.g, background.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         
@@ -108,4 +255,8 @@ void DrawScene(const Scene& scene, const ShaderProgram& shader)
             }
         }
     }
+    
+    
+    // Later rendering should not inherit the last camera's restriction.
+    glDisable(GL_SCISSOR_TEST);
 }

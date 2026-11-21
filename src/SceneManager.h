@@ -4,9 +4,11 @@
 
 // Project headers
 #include "rendering/Camera.h"
+#include "Palette.h"
 
 
 // Standard library
+#include <vector>
 
 
 // Third-party libraries
@@ -23,6 +25,18 @@ namespace AcornData
 }
 
 
+namespace Demo
+{
+    
+    enum class SplitScreenSettings_Extra_Carousel
+    {
+        // Useless, but fun to try to create: 
+        CarouselVerticalSplit,      // Moving over screen sideways Left to Right
+        CarouselHorizontalSplit,    // Moving over screen from Up to Down screen
+        CarouselGridSplit           // Circling clockwise 
+    };
+    
+}
 
 
 
@@ -38,9 +52,11 @@ struct FramebufferSize
 
 enum SplitScreenSettings
 {
-    VerticalSplit,
-    HorizontalSplit,
+    VerticalSplit,              // Vertical dividing lines: views arranged left to right.
+    HorizontalSplit,            // Horizontal dividing lines: views arranged bottom to top.
+    GridSplit,                  // Discord or Teams similar layout 
 };
+
 
 
 struct Sun
@@ -53,6 +69,8 @@ struct Sun
 
 struct SceneSettings
 {
+    glm::vec3 defaultBackgroundColor{Palette::lightBlue};
+    
     Sun sun{}; 
     
     SplitScreenSettings splitScreen = VerticalSplit;
@@ -61,6 +79,7 @@ struct SceneSettings
 
 struct SceneCamera
 {
+    int ID = -1;   // -1 is invalid, 0 default, and new scenes should be added with +1 
     bool enabled = true; 
     Rendering::CameraData camera;
 
@@ -97,7 +116,10 @@ void ConfigureSceneViewports(Scene& scene, const FramebufferSize& framebuffer);
 // Update once.
 void UpdateScene(Scene& scene, float deltaTime);
 
+
+
 // Draw the resulting state through each camera.
+// Note:  Currently will have to re-calculate the model matrix for each camera instead of once and then applied to each camera draw. 
 void DrawScene(const Scene& scene, const ShaderProgram& shader);
 
 
