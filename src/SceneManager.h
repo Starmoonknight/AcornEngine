@@ -25,21 +25,6 @@ namespace AcornData
 }
 
 
-namespace Demo
-{
-    
-    enum class SplitScreenSettings_Extra_Carousel
-    {
-        // Useless, but fun to try to create: 
-        CarouselVerticalSplit,      // Moving over screen sideways Left to Right
-        CarouselHorizontalSplit,    // Moving over screen from Up to Down screen
-        CarouselGridSplit           // Circling clockwise 
-    };
-    
-}
-
-
-
 
 
 struct FramebufferSize
@@ -69,7 +54,7 @@ struct Sun
 
 struct SceneSettings
 {
-    glm::vec3 defaultBackgroundColor{Palette::lightBlue};
+    glm::vec3 defaultBackgroundColor{Palette::paleSkyBlue};
     
     Sun sun{}; 
     

@@ -117,6 +117,7 @@ namespace Demo
             pyramid_manual.renderSettings.lightingRequested = true; 
                         
             cube_V2.textureID = testTexture_crate;
+            cube_V2.renderSettings.tintTextureAmount = 1.0f;
             cube_V2.renderSettings.lightingRequested = true; 
         }
         

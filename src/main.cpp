@@ -7,6 +7,7 @@
 #include "rendering/Renderer.h"
 #include "rendering/ShaderProgram.h" 
 #include "SceneManager.h"
+#include "testing/CarouselDemo.h"
 #include "testing/Demo.h"
 
 
@@ -415,7 +416,6 @@ int main(int argc, char **argv) {
         sceneCamera.camera.projectionSettings.orthographicHeight = 10.0f;
         sceneCamera.camera.projectionSettings.nearPlane = 0.1f;
         sceneCamera.camera.projectionSettings.farPlane = 100.0f;
-        sceneCamera.backgroundColor = scene.settings.defaultBackgroundColor;
         
         // camera 2,  set up with camera 1 
         secondCamera.camera.projectionSettings = sceneCamera.camera.projectionSettings;
@@ -423,7 +423,7 @@ int main(int argc, char **argv) {
         secondCamera.target = sceneCamera.target;
         secondCamera.startingOffset = sceneCamera.startingOffset;
         secondCamera.orbitAngleDegrees = 180.0f;
-        secondCamera.backgroundColor = glm::vec3(0.12f, 0.12f, 0.18f);
+        secondCamera.backgroundColor = scene.settings.defaultBackgroundColor;
         
         // update each camera transform to match starting values 
         for (SceneCamera& camera : scene.cameras)
@@ -464,6 +464,17 @@ int main(int argc, char **argv) {
         
         
         
+        //  Testing weird camera layouts 
+        const bool useCarouselExperiment = true;
+
+        Demo::CarouselSettings carousel;
+
+        carousel.layout =
+            Demo::SplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
+
+        carousel.secondsPerLoop = 8.0f;
+        
+        
         
         
         
@@ -473,7 +484,6 @@ int main(int argc, char **argv) {
             << std::chrono::duration<double>(
                    std::chrono::steady_clock::now() - startupStart).count()
             << " seconds\n";
-        
         
         
         
@@ -508,7 +518,7 @@ int main(int argc, char **argv) {
             
             previousZeroDown = zeroDown;
             
-            // backgrround color for single camera 
+            // background color for  camera 1
             sceneCamera.backgroundColor = useBlackBackground
                 ? glm::vec3(0.0f)
                 : glm::vec3(0.2f, 0.3f, 0.3f);
@@ -529,6 +539,13 @@ int main(int argc, char **argv) {
             }
             
             ConfigureSceneViewports(scene, framebuffer);
+            
+            
+            if (useCarouselExperiment)
+            {
+                Demo::UpdateCarousel(carousel, deltaTime);
+            }
+            
             
             
             
@@ -696,7 +713,19 @@ int main(int argc, char **argv) {
             
             
             Rendering::ApplyRenderSettings(renderSettings);
-            DrawScene(scene, shaderProgram);
+
+            if (useCarouselExperiment)
+            {
+                Demo::DrawCarouselScene(
+                    scene,
+                    shaderProgram,
+                    framebuffer,
+                    carousel);
+            }
+            else
+            {
+                DrawScene(scene, shaderProgram);
+            }
             
             glfwSwapBuffers(window);
         }
