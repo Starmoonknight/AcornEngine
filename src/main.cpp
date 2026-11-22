@@ -10,15 +10,16 @@
 #include "testing/CarouselDemo.h"
 #include "testing/Demo.h"
 
-
-
 // Standard library
+#include <array>
 #include <cassert>      // assert 
 #include <chrono>       // For measuring application load time 
 #include <cmath>        // Scalar math for geometry and animation
+#include <filesystem>
 #include <iostream>     // std::cout and std::cerr for diagnostics
+#include <initializer_list>
+#include <optional>
 #include <vector>       // Mesh data and temporary OBJ attribute lists
-
 
 // Third-party libraries - OpenGL
 #include <glad/glad.h>                      // Keep glad include before GLFW include 
@@ -180,6 +181,44 @@ namespace
     }
     
     
+    
+    struct SceneSelectionInputHistory
+    {
+        std::array<bool, 3> previousDown{};
+    };
+
+    // Returns an array index only on a new key press.
+    // If several keys are newly pressed together, the lowest index wins.
+    std::optional<std::size_t> ReadSceneSelection(
+        GLFWwindow* window,
+        SceneSelectionInputHistory& history)
+    {
+        constexpr std::array<int, 3> keys{
+            GLFW_KEY_1,
+            GLFW_KEY_2,
+            GLFW_KEY_3
+        };
+
+        std::optional<std::size_t> requested;
+
+        for (std::size_t i = 0; i < keys.size(); ++i)
+        {
+            const bool down =
+                glfwGetKey(window, keys[i]) == GLFW_PRESS;
+
+            if (down && !history.previousDown[i] &&
+                !requested.has_value())
+            {
+                requested = i;
+            }
+
+            // Update every key, even after choosing a request.
+            history.previousDown[i] = down;
+        }
+
+        return requested;
+    }
+    
 }
 
 
@@ -254,7 +293,6 @@ int main(int argc, char **argv) {
     std::cerr << "[Startup] Entered main\n";
     
     
-    
     // ---- Setup Window ---- 
     
     std::cout << "hello world!" << '\n';   // std::endl;
@@ -270,7 +308,6 @@ int main(int argc, char **argv) {
         glfwTerminate();
         return -1;
     }
-    
     
     // ---- Setup Shader Program ---- 
     
@@ -297,7 +334,6 @@ int main(int argc, char **argv) {
         
         // ---- Loading Assets  ---- 
         
-        
         // Temp program time measurement 
         const auto assetsStart = std::chrono::steady_clock::now();
         
@@ -317,41 +353,70 @@ int main(int argc, char **argv) {
             std::cerr << "[Warning] Failed to load texture: textures/awesomeface.png\n";
         }
         
+        
+        GLuint backpackTexture = Texture::LoadTexture2D("models/backpack/diffuse.jpg");
+        if (backpackTexture == 0)
+        {
+            std::cerr << "[Warning] Failed to load texture: models/backpack/diffuse.jpg\n";
+        }
+        
+        GLuint teapotTexture = Texture::LoadTexture2D("models/teapot/default.png");
+        if (teapotTexture == 0)
+        {
+            std::cerr << "[Warning] Failed to load texture: models/teapot/default.png\n";
+        }
+        
+        GLuint ipsheadTexture = Texture::LoadTexture2D("models/lpshead/rendered.jpg");
+        if (ipsheadTexture == 0)
+        {
+            std::cerr << "[Warning] Failed to load texture: models/lpshead/rendered.jpg\n";
+        }
+        
+        GLuint cubeTexture = Texture::LoadTexture2D("models/cube/default.png");
+        if (cubeTexture == 0)
+        {
+            std::cerr << "[Warning] Failed to load texture: models/cube/default.png\n";
+        }
+        
+        GLuint pineTexture = Texture::LoadTexture2D("models/pine/LushPine.png");
+        if (pineTexture == 0)
+        {
+            std::cerr << "[Warning] Failed to load texture: models/pine/LushPine.png\n";
+        }
+        
+        
         stbi_set_flip_vertically_on_load(false);
         
         
-        // preparing rendering objects, week2 shapes  
-        Demo::Testing_DefaultShapes basicShapes {testTexture_crate}; 
+        // Owns this level's cached geometry and newly created scene objects.
+        Scene activeScene{
+            std::filesystem::current_path()
+        };
         
         
-        //  preparing rendering objects, week3 models 
-        Demo::Testing_TwoBackpacks twoBackpacks {};
-        
-        Demo::Testing_TwoTeapots twoTeapots {};
-        Demo::Testing_TwoIpshead twoIpshead {};
-        Demo::Testing_TwoCubes twoCubes {};
-        Demo::Testing_TwoPines twoPines {};
-        Demo::Testing_TwoSportCars twoSportCars {};
+        /*
         
         
+        // --- testing new import pipeline --- 
+        Demo::PopulateComparison_Backpack(activeScene, backpackTexture);
+        //Demo::PopulateComparison_Teapot(activeScene, teapotTexture);
+        //Demo::PopulateComparison_Ipshead(activeScene, ipsheadTexture);
+        //Demo::PopulateComparison_Cube(activeScene, cubeTexture);
+        Demo::PopulateComparison_Pine(activeScene, pineTexture);
+        //Demo::PopulateComparison_SportsCar(activeScene, 0);
         
-        
-        // Temp program time measurement 
-        const auto assetsEnd = std::chrono::steady_clock::now();
-
-        std::cerr
-            << "[Startup] Asset setup: "
-            << std::chrono::duration<double>(assetsEnd - assetsStart).count()
-            << " seconds\n";
-        
+        */
         
         
         
         // ---- Scene Settings ---- 
         
-        Scene scene;
-        scene.SceneID = 0;
-        scene.settings.splitScreen = VerticalSplit;
+        // Later test some active scenes with different populations, keypresses to switch scene 
+        
+        
+        Scene& scene = activeScene;
+        //scene.sceneID = 0;
+        //scene.settings.splitScreen = AcornData::SplitScreenSettings::HorizontalSplit;
         
         // face culling    
         Rendering::RenderSettings renderSettings {};
@@ -363,54 +428,19 @@ int main(int argc, char **argv) {
         glEnable(GL_DEPTH_TEST);
         
         
-        // Register all nine default-shape instances
-        for (auto* model : {
-            &basicShapes.basicPyramid_1,
-            &basicShapes.basicPyramid_2,
-            &basicShapes.pyramid_V1,
-            &basicShapes.pyramid_manual,
-            &basicShapes.basicCube_1,
-            &basicShapes.basicCube_2,
-            &basicShapes.cube_V2,
-            &basicShapes.sphere_1,
-            &basicShapes.sphere_2})
-        {
-            AddSceneModel(scene, model);
-        }
         
-        // and Register all the loaded test-model instances
-        for (auto* model : {
-            &twoBackpacks.backpack_assimp,
-            &twoBackpacks.backpack_mine,
-            &twoTeapots.teapot_assimp,
-            &twoTeapots.teapot_mine,
-            &twoIpshead.lpshead_assimp,
-            &twoIpshead.lpshead_mine,
-            &twoCubes.cube_assimp,
-            &twoCubes.cube_mine,
-            &twoPines.pine_assimp,
-            &twoPines.pine_mine,
-            &twoSportCars.sportCar_assimp,
-            &twoSportCars.sportCar_mine})
-        {
-            model->renderSettings.lightingRequested = true;
-            AddSceneModel(scene, model);
-        }
-        
-        
-        
-        
+        /*
         
         // ---- Camera ---- 
         
-        scene.cameras.resize(4);
+        scene.cameras.resize(2);
         
         // Resizing or appending the vector can screw up saved references, if that were to 
         // happen the saved sceneCamera and secondCamera would need to be set again before use
         SceneCamera& sceneCamera = scene.cameras[0];
         SceneCamera& secondCamera = scene.cameras[1];
-        SceneCamera& thirdCamera = scene.cameras[2];
-        SceneCamera& fourthCamera = scene.cameras[3];
+        //SceneCamera& thirdCamera = scene.cameras[2];
+        //SceneCamera& fourthCamera = scene.cameras[3];
         
         // camera 1
         sceneCamera.camera.projectionSettings.projectionType = Rendering::ProjectionType::PERSPECTIVE; 
@@ -427,7 +457,11 @@ int main(int argc, char **argv) {
         secondCamera.orbitAngleDegrees = 180.0f;
         secondCamera.backgroundColor = scene.settings.defaultBackgroundColor;
         
-        thirdCamera.backgroundColor = Palette::pink;
+        // camera 3
+        //thirdCamera.backgroundColor = Palette::pink;
+        
+        // camera 4 
+        
         
         // update each camera transform to match starting values 
         for (SceneCamera& camera : scene.cameras)
@@ -440,8 +474,31 @@ int main(int argc, char **argv) {
         }
         
         
+        */
+        
         
         const float cameraSpeed = 10.0f;
+        
+        
+        
+        const auto sceneDescriptions = Demo::MakeDemoScenes();
+
+        if (!LoadSceneFromDescription(activeScene, sceneDescriptions[0]))
+        {
+            std::cerr << "[Scene] Failed to load initial scene\n";
+        }
+        
+        
+        
+        
+        // Temp program time measurement 
+        const auto assetsEnd = std::chrono::steady_clock::now();
+
+        std::cerr
+            << "[Startup] Asset setup: "
+            << std::chrono::duration<double>(assetsEnd - assetsStart).count()
+            << " seconds\n";
+        
         
         
         
@@ -454,8 +511,11 @@ int main(int argc, char **argv) {
         FramebufferSize framebuffer{};
         
         
+        SceneSelectionInputHistory sceneSelectionHistory;
         
-        int selectedTest = static_cast<int>(Demo::TestSceneObjects::DefaultShapes);     // what models to show
+        
+        // change this to toggle between scenes 
+        //int selectedTest = static_cast<int>(Demo::TestSceneObjects::Backpacks);     // what models to show
         
         
         
@@ -469,12 +529,12 @@ int main(int argc, char **argv) {
         
         
         //  Testing weird camera layouts 
-        const bool useCarouselExperiment = true;
+        const bool useCarouselExperiment = false;
 
         Demo::CarouselSettings carousel;
 
         carousel.layout =
-            Demo::SplitScreenSettings_Extra_Carousel::CarouselGridSplit;
+            Demo::SplitScreenSettings_Extra_Carousel::CarouselHorizontalSplit;
 
         carousel.secondsPerLoop = 8.0f;
         
@@ -503,32 +563,74 @@ int main(int argc, char **argv) {
             float deltaTime = clock.deltaTime;
             
             
-            // render settings and camera projection 
-            processInput_RenderSettings(
-                window, 
-                renderSettingInputHistory, 
-                renderSettings, 
-                sceneCamera.camera);
             
+            const auto requestedScene =
+            ReadSceneSelection(window, sceneSelectionHistory);
             
-            
-            // switch between bright and dark background with key press 0 
-            const bool zeroDown = glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS;
-            
-            if (zeroDown && !previousZeroDown)
+            if (requestedScene.has_value())
             {
-                useBlackBackground = !useBlackBackground;
+                const std::size_t index = *requestedScene;
+
+                if (index < sceneDescriptions.size())
+                {
+                    
+                    const bool loaded = LoadSceneFromDescription(
+                        activeScene,
+                        sceneDescriptions[index]);
+
+                    if (loaded)
+                    {
+                        glfwSetWindowTitle(window, activeScene.name.c_str()); 
+                        
+                        std::cout
+                            << "[Scene] Loaded "
+                            << activeScene.name << '\n';
+                    }
+                    else
+                    {
+                        std::cerr
+                            << "[Scene] Failed to load "
+                            << sceneDescriptions[index].name << '\n';
+                    }
+
+                    // Synchronous loading must not become a movement timestep.
+                    clock.Reset(glfwGetTime());
+                    deltaTime = 0.0f;
+                }
             }
+
             
-            previousZeroDown = zeroDown;
+            // Acquire camera access only after any scene replacement.
+            // Failed loading deliberately leaves an empty scene.
+            if (!scene.cameras.empty())
+            {
+                processInput_RenderSettings(
+                    window,
+                    renderSettingInputHistory,
+                    renderSettings,
+                    scene.cameras[0].camera);
+                
+                
+                
+                // switch between bright and dark background with key press 0 
+                const bool zeroDown = glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS;
+                
+                if (zeroDown && !previousZeroDown)
+                {
+                    useBlackBackground = !useBlackBackground;
+                }
+                
+                previousZeroDown = zeroDown;
+                
+                // background color for  camera 1
+                scene.cameras[0].backgroundColor = useBlackBackground
+                    ? glm::vec3(0.0f)
+                    : glm::vec3(0.2f, 0.3f, 0.3f);
+                
+            }
+
             
-            // background color for  camera 1
-            sceneCamera.backgroundColor = useBlackBackground
-                ? glm::vec3(0.0f)
-                : glm::vec3(0.2f, 0.3f, 0.3f);
-            
-            
-            
+            scene.UpdateScene(deltaTime);
             
             
             glfwGetFramebufferSize(
@@ -536,13 +638,14 @@ int main(int argc, char **argv) {
                 &framebuffer.width,
                 &framebuffer.height);
             
+            
             // zero check skips drawing if there is no drawable area
             if (framebuffer.width == 0 || framebuffer.height == 0)
             {
                 continue;
             }
             
-            ConfigureSceneViewports(scene, framebuffer);
+            scene.ConfigureSceneViewports(framebuffer);
             
             
             if (useCarouselExperiment)
@@ -552,7 +655,7 @@ int main(int argc, char **argv) {
             
             
             
-            
+            /* Orbiting camera code 
             for (SceneCamera& camera : scene.cameras)
             {
                 if (camera.enabled)
@@ -562,8 +665,7 @@ int main(int argc, char **argv) {
                     //Demo::UpdateCameraPos(window, camera, cameraSpeed, deltaTime);
                 }
             }
-                        
-            
+            */
             
             
             //const glm::vec3 spinningSunDirection = Demo::SpinTheSun(deltaTime, sunAngleDegrees);
@@ -571,153 +673,9 @@ int main(int argc, char **argv) {
             
             
             
-            //Demo::Update_TestingDefaultShapes(window, shaderProgram, basicShapes, deltaTime, view, projection, testTexture_crate);
-            
-            
-            
-            
-            
-            
-            // - Backpack, teapot, and cube render with both loaders.
-            // - Pine renders with both loaders. More of the tree is visible with back-face culling disabled, which suggests some surfaces need two-sided rendering.
-            // - Sports car and head render only through Assimp. The custom loader aborts on quads that fail both diagonal checks.
-            // - The head test uses `rendered.jpg`. Its material specifies `lambertian.jpg` as the diffuse texture, so the texture needs retesting with that image.
-            
-            if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) selectedTest = 1;
-            else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) selectedTest = 2;
-            else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) selectedTest = 3;
-            else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) selectedTest = 4;
-            else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) selectedTest = 5;
-            else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) selectedTest = 6;
-            else if (glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS) selectedTest = 7;
-            else if (glfwGetKey(window, GLFW_KEY_8) == GLFW_PRESS) selectedTest = 8;
-            
-            
-            // hide all registered models 
-            for (AcornData::RenderModelInstance* model : scene.models)
-            {
-                if (model != nullptr)
-                    model->renderSettings.visible = false;
-            }
-            
-            const Demo::TestSceneObjects selected = 
-                static_cast<Demo::TestSceneObjects>(selectedTest);
-
-            const bool showAllObjModels =
-                selected == Demo::TestSceneObjects::AllModels;
-            
-            
-            
-            if (selected == Demo::TestSceneObjects::DefaultShapes)
-            {
-                for (auto* model : {
-                    &basicShapes.basicPyramid_1,
-                    &basicShapes.basicPyramid_2,
-                    &basicShapes.pyramid_V1,
-                    &basicShapes.pyramid_manual,
-                    &basicShapes.basicCube_1,
-                    &basicShapes.basicCube_2,
-                    &basicShapes.cube_V2,
-                    &basicShapes.sphere_1,
-                    &basicShapes.sphere_2})
-                {
-                    model->renderSettings.visible = true;
-                }
-
-                Demo::Update_TestingDefaultShapes(window, basicShapes, deltaTime);
-            }
-            
-            
-            if (showAllObjModels || selected == Demo::TestSceneObjects::Backpacks)
-            {
-                twoBackpacks.backpack_assimp.renderSettings.visible = true;
-                twoBackpacks.backpack_mine.renderSettings.visible = true;
-
-                Demo::UpdateModelPair(
-                    window,
-                    twoBackpacks.runtime_Inputs,
-                    twoBackpacks.runtime_Info,
-                    twoBackpacks.backpack_assimp,
-                    twoBackpacks.backpack_mine,
-                    deltaTime);
-            }
-
-            if (showAllObjModels || selected == Demo::TestSceneObjects::Teapots)
-            {
-                twoTeapots.teapot_assimp.renderSettings.visible = true;
-                twoTeapots.teapot_mine.renderSettings.visible = true;
-
-                Demo::UpdateModelPair(
-                    window,
-                    twoTeapots.runtime_Inputs,
-                    twoTeapots.runtime_Info,
-                    twoTeapots.teapot_assimp,
-                    twoTeapots.teapot_mine,
-                    deltaTime);
-            }
-
-            if (showAllObjModels || selected == Demo::TestSceneObjects::Cubes)
-            {
-                twoCubes.cube_assimp.renderSettings.visible = true;
-                twoCubes.cube_mine.renderSettings.visible = true;
-
-                Demo::UpdateModelPair(
-                    window,
-                    twoCubes.runtime_Inputs,
-                    twoCubes.runtime_Info,
-                    twoCubes.cube_assimp,
-                    twoCubes.cube_mine,
-                    deltaTime);
-            }
-
-            if (showAllObjModels || selected == Demo::TestSceneObjects::Pines)
-            {
-                twoPines.pine_assimp.renderSettings.visible = true;
-                twoPines.pine_mine.renderSettings.visible = true;
-
-                Demo::UpdateModelPair(
-                    window,
-                    twoPines.runtime_Inputs,
-                    twoPines.runtime_Info,
-                    twoPines.pine_assimp,
-                    twoPines.pine_mine,
-                    deltaTime);
-            }
-
-            if (showAllObjModels || selected == Demo::TestSceneObjects::SportCars)
-            {
-                twoSportCars.sportCar_assimp.renderSettings.visible = true;
-                twoSportCars.sportCar_mine.renderSettings.visible = true;
-
-                Demo::UpdateModelPair(
-                    window,
-                    twoSportCars.runtime_Inputs,
-                    twoSportCars.runtime_Info,
-                    twoSportCars.sportCar_assimp,
-                    twoSportCars.sportCar_mine,
-                    deltaTime);
-            }
-
-            if (showAllObjModels || selected == Demo::TestSceneObjects::Ipshead)
-            {
-                twoIpshead.lpshead_assimp.renderSettings.visible = true;
-                twoIpshead.lpshead_mine.renderSettings.visible = true;
-
-                Demo::UpdateModelPair(
-                    window,
-                    twoIpshead.runtime_Inputs,
-                    twoIpshead.runtime_Info,
-                    twoIpshead.lpshead_assimp,
-                    twoIpshead.lpshead_mine,
-                    deltaTime);
-            }
-            
-            
-            
-            
-            
             Rendering::ApplyRenderSettings(renderSettings);
 
+            // change so one scene uses this later 
             if (useCarouselExperiment)
             {
                 Demo::DrawCarouselScene(
@@ -728,7 +686,7 @@ int main(int argc, char **argv) {
             }
             else
             {
-                DrawScene(scene, shaderProgram);
+                scene.DrawScene(shaderProgram);
             }
             
             glfwSwapBuffers(window);
@@ -738,42 +696,13 @@ int main(int argc, char **argv) {
         glDeleteTextures(1, &testTexture_crate);
         glDeleteTextures(1, &testTexture_face);
 
-        glDeleteTextures(1, &twoBackpacks.sharedTexture);
-        glDeleteTextures(1, &twoTeapots.sharedTexture);
-        glDeleteTextures(1, &twoIpshead.sharedTexture);
-        glDeleteTextures(1, &twoCubes.sharedTexture);
-        glDeleteTextures(1, &twoPines.sharedTexture);
-        glDeleteTextures(1, &twoSportCars.sharedTexture);
+        glDeleteTextures(1, &backpackTexture);
+        glDeleteTextures(1, &teapotTexture);
+        glDeleteTextures(1, &ipsheadTexture);
+        glDeleteTextures(1, &cubeTexture);
+        glDeleteTextures(1, &pineTexture);
         
-        
-        // Mesh cleanup
-        Rendering::DestroyGpuModel(basicShapes.pyramidGpu);
-        Rendering::DestroyGpuModel(basicShapes.cubeGpu);
-        Rendering::DestroyGpuModel(basicShapes.sphereGpu);
-        
-        Rendering::DestroyGpuModel(basicShapes.pyramidGp_v2);
-        Rendering::DestroyGpuModel(basicShapes.cubeGpu_v2);
-        
-        
-        // Model cleanup
-        //Rendering::DestroyGpuModel(backpack);    
-        Rendering::DestroyGpuModel(twoBackpacks.backpackGpu_assimp);    
-        Rendering::DestroyGpuModel(twoBackpacks.backpackGpu_mine);  
-        
-        Rendering::DestroyGpuModel(twoTeapots.teapotGpu_assimp);    
-        Rendering::DestroyGpuModel(twoTeapots.teapotGpu_mine);    
-        
-        Rendering::DestroyGpuModel(twoIpshead.lpsheadGpu_assimp);    
-        Rendering::DestroyGpuModel(twoIpshead.lpsheadGpu_mine);    
-        
-        Rendering::DestroyGpuModel(twoCubes.cubeGpu_assimp);    
-        Rendering::DestroyGpuModel(twoCubes.cubeGpu_mine);    
-        
-        Rendering::DestroyGpuModel(twoPines.pineGpu_assimp);    
-        Rendering::DestroyGpuModel(twoPines.pineGpu_mine);    
-        
-        Rendering::DestroyGpuModel(twoSportCars.sportCarGpu_assimp);    
-        Rendering::DestroyGpuModel(twoSportCars.sportCarGpu_mine);    
+       
         
         
         glDeleteProgram(shaderProgram.ID);

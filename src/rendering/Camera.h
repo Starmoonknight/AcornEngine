@@ -1,13 +1,19 @@
 #pragma once
 
 
-// Project headers
-#include "AcornMath.h"
-
 
 
 // Third-party libraries
 #include <glm/glm.hpp>                          // Vectors, matrices, dot and cross products
+#include <glm/gtc/quaternion.hpp>
+
+
+namespace AcornData
+{
+    struct EulerAnglesDegrees;
+}
+
+
 
 
 

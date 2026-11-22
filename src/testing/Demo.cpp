@@ -2,7 +2,17 @@
 
 // Project headers
 #include "rendering/Camera.h"
+#include "rendering/ShaderProgram.h"
 #include "SceneManager.h"
+
+// Standard library
+#include <cassert>
+#include <cmath>
+#include <initializer_list>
+#include <vector>                               
+
+// Third-party libraries
+#include <glm/gtc/matrix_transform.hpp>     
 
 
 
@@ -37,7 +47,9 @@ namespace
 namespace Demo
 {
     
-   void HandleRuntimeInputs(
+    
+
+    void HandleRuntimeInputs(
         GLFWwindow* window, 
         GeometryRuntimeValues_Inputs& inputs, 
         GeometryRuntimeValues_Transforms& values)
@@ -316,151 +328,6 @@ namespace Demo
     
     
     
-    void Update_TestingDefaultShapes(GLFWwindow* window, Testing_DefaultShapes& basicShapes, float deltaTime)
-    {
-       
-       // Capture the animation values currently reflected in the models BEFORE input: 
-       // Space can reset the manual values.
-       const glm::vec3 previousManualTranslation = basicShapes.runtime_Info.translation;
-       const glm::vec3 previousManualRotation = basicShapes.runtime_Info.rotationDegrees;
-       const glm::vec3 previousManualScale = basicShapes.runtime_Info.scale;
-
-       const glm::vec3 previousPyramidScale = basicShapes.pyramidAuto.scale;
-       const glm::vec3 previousCubeRotation = basicShapes.cubeAuto.rotationDegrees;
-       const glm::vec3 previousSphereTranslation = basicShapes.sphereAuto.translation;
-       
-        
-        HandleRuntimeInputs(window, basicShapes.runtime_Inputs, basicShapes.runtime_Info);
-
-        Update_Transforms(basicShapes.runtime_Info, deltaTime);
-        Update_Transforms(basicShapes.cubeAuto, deltaTime);
-        Update_Transforms(basicShapes.sphereAuto, deltaTime);
-        Update_Transforms(basicShapes.pyramidAuto, deltaTime);
-        
-        
-       
-       // Translation and Euler-angle offsets combine by addition,
-       // so their per-update changes are differences.
-       const glm::vec3 manualTranslationChange =
-           basicShapes.runtime_Info.translation - previousManualTranslation;
-
-       const glm::vec3 manualRotationChange =
-           basicShapes.runtime_Info.rotationDegrees - previousManualRotation;
-
-       const glm::vec3 cubeRotationChange =
-           basicShapes.cubeAuto.rotationDegrees - previousCubeRotation;
-
-       const glm::vec3 sphereTranslationChange =
-           basicShapes.sphereAuto.translation - previousSphereTranslation;
-
-       
-       // Scale factors combine by multiplication,
-       // so their per-update changes are ratios.
-       const glm::vec3 manualScaleRatio =
-           basicShapes.runtime_Info.scale / previousManualScale;
-
-       const glm::vec3 pyramidScaleRatio =
-           basicShapes.pyramidAuto.scale / previousPyramidScale;
-       
-       
-       
-       // Automatically scaling pyramids.
-       basicShapes.basicPyramid_1.transform.scale *= pyramidScaleRatio;
-       basicShapes.basicPyramid_2.transform.scale *= pyramidScaleRatio;
-       basicShapes.pyramid_V1.transform.scale *= pyramidScaleRatio;
-       
-       
-       // Manually controlled pyramid.
-       basicShapes.pyramid_manual.transform.position +=
-           manualTranslationChange;
-       basicShapes.pyramid_manual.transform.rotationDegrees +=
-           manualRotationChange;
-       basicShapes.pyramid_manual.transform.scale *=
-           manualScaleRatio;
-       
-       
-       // Automatically rotating cubes.
-       basicShapes.basicCube_1.transform.rotationDegrees +=
-           cubeRotationChange;
-       basicShapes.basicCube_2.transform.rotationDegrees -=
-           cubeRotationChange;
-       basicShapes.cube_V2.transform.rotationDegrees +=
-           cubeRotationChange;
-
-       
-       // Automatically translating spheres.
-       basicShapes.sphere_1.transform.position +=
-           sphereTranslationChange;
-       basicShapes.sphere_2.transform.position -=
-           sphereTranslationChange;
-       
-    }
-    
-    
-    void Draw_TestingDefaultShapes(const ShaderProgram& shaderProgram, Testing_DefaultShapes& basicShapes, const Rendering::CameraMatrices& viewMatrices)
-    {
-        
-        // activate program
-        shaderProgram.use(); 
-        
-        const BasicUniformLocations& uniforms = shaderProgram.GetBasicUniformLocations();
-        glUniform1i(uniforms.textureLocation, 0); // uTexture2D → unit 0
-        
-        
-        // Pyramid: placed on the left.
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.basicPyramid_1);
-       
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.basicPyramid_2);
-        
-        
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.pyramid_V1);
-        
-        
-        // manually controlled pyramid,     testing drawing colors per face 
-        glm::mat4 pyramidMatrix_Manual = AcornMath::BuildModelMatrix(basicShapes.pyramid_manual.transform);
-        assert(basicShapes.pyramid_manual.gpuModel != nullptr);
-        assert(basicShapes.pyramid_manual.gpuModel->meshes.size() == 1);
-        const auto& manualPyramidMesh = basicShapes.pyramid_manual.gpuModel->meshes.front();
-        Rendering::SetBasicShaderUniforms(shaderProgram, pyramidMatrix_Manual, viewMatrices.view, viewMatrices.projection, 
-            basicShapes.pyramid_manual.renderSettings.overrideColor, basicShapes.pyramid_manual.renderSettings.tintColor, 1.0f, false, 0.0f
-        );
-        shaderProgram.SetBool("uUseLighting", manualPyramidMesh.hasNormals);
-        Rendering::DrawMesh_FaceColors(shaderProgram, manualPyramidMesh, pyramid_FaceColors); 
-        
-        
-        
-        // Cube version 1: placed in the middle.
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.basicCube_1);
-        
-        
-        // testing drawing colors per face 
-        glm::mat4 cubeMatrix_2 = AcornMath::BuildModelMatrix(basicShapes.basicCube_2.transform);
-        assert(basicShapes.basicCube_2.gpuModel != nullptr);
-        assert(basicShapes.basicCube_2.gpuModel->meshes.size() == 1);
-        const auto& faceColoredCubeMesh = basicShapes.basicCube_2.gpuModel->meshes.front();
-        Rendering::SetBasicShaderUniforms(shaderProgram, cubeMatrix_2, viewMatrices.view, viewMatrices.projection, 
-            basicShapes.basicCube_2.renderSettings.overrideColor, basicShapes.basicCube_2.renderSettings.tintColor, 1.0f, false, 0.0f
-        );
-        shaderProgram.SetBool("uUseLighting", false);
-        Rendering::DrawMesh_FaceColors(shaderProgram, faceColoredCubeMesh, cube_FaceColors); 
-        
-        
-        
-        // Cube version 2: placed behind the other cubes.  Testing textures 
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.cube_V2); 
-        
-        
-        
-        // Sphere: placed on the right.
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.sphere_1);
-        
-        Rendering::DrawModel(shaderProgram, viewMatrices, basicShapes.sphere_2);
-        
-    }
-
-    
-    
-    
     void UpdateModelPair(GLFWwindow* window, GeometryRuntimeValues_Inputs& inputs,
         GeometryRuntimeValues_Transforms& animation, AcornData::RenderModelInstance& left,
         AcornData::RenderModelInstance& right, float deltaTime)
@@ -584,6 +451,336 @@ namespace Demo
            cameraData.TranslateLocalX(distance); // Right
        }
    }
+    
+    
+    
+    
+    
+    
+
+    std::array<AcornData::SceneDescription, 3> MakeDemoScenes()
+    {
+        std::array<AcornData::SceneDescription, 3> scenes{};
+
+        for (std::size_t i = 0; i < scenes.size(); ++i)
+        {
+            auto& scene = scenes[i];
+
+            scene.name = "Demo " + std::to_string(i + 1);
+            scene.sceneID = static_cast<int>(i);
+            
+            if (i == 2)
+            {
+                scene.settings.splitScreen =
+                    AcornData::SplitScreenSettings::HorizontalSplit;
+            }
+            else
+            {
+                scene.settings.splitScreen =
+                    AcornData::SplitScreenSettings::VerticalSplit;
+            }
+
+            const float startHeight = 1.0f + static_cast<float>(i);
+
+            scene.playerStarts[0].position =
+                glm::vec3(-2.0f, startHeight, 8.0f);
+
+            scene.playerStarts[1].position =
+                glm::vec3(2.0f, startHeight, 8.0f);
+
+            // Both use zero rotation and therefore face world -Z.
+            scene.goalPosition = glm::vec3(0.0f, 0.0f, -5.0f);
+
+            for (int objectIndex = 0; objectIndex < 3; ++objectIndex)
+            {
+                AcornData::SceneObjectDescription object;
+
+                
+                object.source.filePath = "models/cube/cube.obj";
+                object.source.importSettings.importer =
+                    Assets::ModelImporter::Assimp;
+
+                object.transform.position = glm::vec3(
+                    static_cast<float>(objectIndex - 1) * 3.0f,
+                    0.0f,
+                    -static_cast<float>(i) * 3.0f);
+
+                object.appearance.overrideColor = true;
+                object.appearance.textureExpected = false;
+
+                const std::array<glm::vec3, 3> colors{
+                    glm::vec3(0.9f, 0.2f, 0.2f),
+                    glm::vec3(0.2f, 0.9f, 0.2f),
+                    glm::vec3(0.2f, 0.2f, 0.9f)
+                };
+
+                object.appearance.tintColor = colors[i];
+
+                scene.objects.push_back(object);
+            }
+        }
+
+        return scenes;
+    }
+    
+    
+
+
+    void ApplyDemoAppearance_Backpack(SceneObject& object, GLuint backpackTexture)
+    {
+        if (object.source.filePath == "models/backpack/backpack.obj")
+        {
+            object.instance.renderSettings.textureExpected = true;
+            object.instance.textureID = backpackTexture;
+        }
+    }
+
+    void ApplyDemoAppearance_Teapot(SceneObject& object, GLuint teapotTexture)
+    {
+        if (object.source.filePath == "models/teapot/teapot.obj")
+        {
+            object.instance.renderSettings.textureExpected = true;
+            object.instance.textureID = teapotTexture;
+        }
+    }
+
+    void ApplyDemoAppearance_Ipshead(SceneObject& object, GLuint ipsheadTexture)
+    {
+        if (object.source.filePath == "models/lpshead/head.obj")
+        {
+            object.instance.renderSettings.textureExpected = true;
+            object.instance.textureID = ipsheadTexture;
+        }
+    }
+
+    void ApplyDemoAppearance_Cube(SceneObject& object, GLuint cubeTexture)
+    {
+        if (object.source.filePath == "models/cube/cube.obj")
+        {
+            object.instance.renderSettings.textureExpected = true;
+            object.instance.textureID = cubeTexture;
+        }
+    }
+
+    void ApplyDemoAppearance_Pine(SceneObject& object, GLuint pineTexture)
+    {
+        if (object.source.filePath == "models/pine/scrubPine.obj")
+        {
+            object.instance.renderSettings.textureExpected = true;
+            object.instance.textureID = pineTexture;
+        }
+    }
+
+    
+    void PopulateComparison_Backpack(Scene& loaded, GLuint textureID)
+    {
+        AcornData::SceneObjectDescription description; 
+
+        description.source.filePath = "models/backpack/backpack.obj";
+        description.source.importSettings.flipUVs = true;
+        
+        description.appearance.overrideColor = true;
+        description.appearance.tintColor = glm::vec3(0.75f);    // light gray color without texture 
+        description.appearance.lightingRequested = true;
+        description.appearance.textureExpected = true;
+
+        
+        // Left object: Assimp interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::Assimp;
+
+        description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+
+        
+        // Right object: custom OBJ interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::CustomObj;
+        description.source.importSettings.skipInvalidFaces = false;
+
+        description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+    }
+
+    
+    void PopulateComparison_Teapot(Scene& loaded, GLuint textureID)
+    {
+        AcornData::SceneObjectDescription description; 
+
+        description.source.filePath = "models/teapot/teapot.obj";
+        description.source.importSettings.flipUVs = true;
+        
+        description.appearance.overrideColor = true;
+        description.appearance.tintColor = glm::vec3(0.75f);    // light gray color without texture 
+        description.appearance.lightingRequested = true;
+        description.appearance.textureExpected = true;
+        
+        description.transform.scale = glm::vec3(0.025f);
+        
+        
+        // Left object: Assimp interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::Assimp;
+
+        description.transform.position = glm::vec3(-3.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+
+        
+        // Right object: custom OBJ interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::CustomObj;
+        description.source.importSettings.skipInvalidFaces = false;
+
+        description.transform.position = glm::vec3(3.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+    }
+
+    
+    void PopulateComparison_Ipshead(Scene& loaded, GLuint textureID)
+    {
+        AcornData::SceneObjectDescription description; 
+
+        description.source.filePath = "models/lpshead/head.obj";
+        description.source.importSettings.flipUVs = true;
+        
+        description.appearance.overrideColor = true;
+        description.appearance.tintColor = glm::vec3(0.75f);    // light gray color without texture 
+        description.appearance.lightingRequested = true;
+        description.appearance.textureExpected = true;
+        
+        description.transform.scale = glm::vec3(10.0f);
+
+        
+        // Left object: Assimp interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::Assimp;
+        
+        description.transform.position = glm::vec3(-2.0f, 2.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+
+        
+        // Right object: custom OBJ interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::CustomObj;
+        description.source.importSettings.skipInvalidFaces = false;
+
+        description.transform.position = glm::vec3(2.0f, 2.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+    }
+
+    
+    void PopulateComparison_Cube(Scene& loaded, GLuint textureID)
+    {
+        AcornData::SceneObjectDescription description; 
+
+        description.source.filePath = "models/cube/cube.obj";
+        description.source.importSettings.flipUVs = true;
+        
+        description.appearance.overrideColor = true;
+        description.appearance.tintColor = glm::vec3(0.75f);    // light gray color without texture 
+        description.appearance.lightingRequested = true;
+        description.appearance.textureExpected = true;
+        
+        description.transform.scale = glm::vec3(2.0f);
+
+        
+        // Left object: Assimp interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::Assimp;
+        
+        description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+
+        
+        // Right object: custom OBJ interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::CustomObj;
+        description.source.importSettings.skipInvalidFaces = false;
+
+        description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+    }
+
+    
+    void PopulateComparison_Pine(Scene& loaded, GLuint textureID)
+    {
+        AcornData::SceneObjectDescription description; 
+
+        description.source.filePath = "models/pine/scrubPine.obj";
+        description.source.importSettings.flipUVs = true;
+        
+        description.appearance.overrideColor = true;
+        description.appearance.tintColor = glm::vec3(0.75f);    // light gray color without texture 
+        description.appearance.lightingRequested = true;
+        description.appearance.textureExpected = true;
+        
+        description.transform.scale = glm::vec3(0.01f);
+
+        
+        // Left object: Assimp interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::Assimp;
+        
+       description.transform.position = glm::vec3(-3.0f, -2.0f, 0.5f);
+
+        loaded.AddObject(description, textureID);
+
+        
+        // Right object: custom OBJ interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::CustomObj;
+        description.source.importSettings.skipInvalidFaces = false;
+
+        description.transform.position = glm::vec3(3.0f, -2.0f, 0.5f);
+        
+        loaded.AddObject(description, textureID);
+    }
+
+    
+    void PopulateComparison_SportsCar(Scene& loaded, GLuint textureID)
+    {
+        AcornData::SceneObjectDescription description; 
+
+        description.source.filePath = "models/sportsCar/sportsCar.obj";
+        description.source.importSettings.flipUVs = true;
+        
+        description.appearance.overrideColor = true;
+        description.appearance.tintColor = glm::vec3(0.75f);    // light gray color without texture, remember to add to obj loader as default color when empty 
+        description.appearance.lightingRequested = true;
+        description.appearance.textureExpected = false; 
+        
+
+        // Left object: Assimp interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::Assimp;
+        
+        description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+
+        
+        // Right object: custom OBJ interpretation.
+        description.source.importSettings.importer =
+            Assets::ModelImporter::CustomObj;
+        description.source.importSettings.skipInvalidFaces = false;
+
+        description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
+
+        loaded.AddObject(description, textureID);
+    }
+    
+    
+    
+    
+    
     
     
 }

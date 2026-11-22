@@ -24,6 +24,7 @@ namespace AcornData
         float colorTintAmount = 1.0f; 
         glm::vec3 tintColor{1.0f};
         
+        bool textureExpected = false;
         float tintTextureAmount = 0.0f;
         
         bool lightingRequested = false; 

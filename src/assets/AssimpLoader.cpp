@@ -4,8 +4,10 @@
 // Standard library
 #include <iostream>     // std::cout and std::cerr for diagnostics
 #include <utility>      // std::move when finishing a mesh
+#include <vector>      
 
 // Third-party libraries - assimp 
+#include <glm/glm.hpp>
 #include <assimp/Importer.hpp>              // Assimp::Importer and ReadFile()
 #include <assimp/postprocess.h>             // Triangulation and UV flip flags
 #include <assimp/scene.h>                   // aiScene, aiMesh, and aiFace

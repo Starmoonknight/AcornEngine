@@ -2,16 +2,22 @@
 
 
 // Project headers 
+#include "Camera.h"
 #include "GpuModel.h"
 #include "OpenGLErrors.h"
 #include "RenderInstances.h"
-#include "Camera.h"
+#include "ShaderProgram.h"
+
+// Standard library
+#include <cassert>                          // assert checks
+#include <cstddef>                          // std::size_t and offsetof for vertex attributes
+#include <iostream>
 
 // Third-party libraries
-#include <cstddef>                          // std::size_t and offsetof for vertex attributes
-#include <cassert>                          // assert checks
 #include <glm/gtc/type_ptr.hpp>             // glm::value_ptr for OpenGL uniforms
 #include "stb_image.h"
+
+
 
 
 namespace Texture
@@ -158,12 +164,48 @@ namespace Rendering
         
         for (const auto& mesh : model.gpuModel->meshes)
         {
-            const bool useTexture = mesh.hasUVs && model.textureID != 0;
-            const bool useLighting = settings.lightingRequested && mesh.hasNormals;
+            const bool missingTexture =
+                 settings.textureExpected && model.textureID == 0;
+
+            const bool missingUVs =
+                settings.textureExpected && !mesh.hasUVs;
+
+            const bool showTextureError =
+                missingTexture || missingUVs;
+            
+            
+            const bool useTexture =
+                !showTextureError &&
+                mesh.hasUVs &&
+                model.textureID != 0;
+
+            // Also disable lighting if texture error so the diagnostic remains bright.
+            const bool useLighting =
+                !showTextureError &&
+                settings.lightingRequested &&
+                mesh.hasNormals;
+
+            
+            // If textures are missing but were expected show error color
+            const bool overrideColor =
+                showTextureError || settings.overrideColor;
+
+            const glm::vec3 color =
+                showTextureError
+                    ? glm::vec3(1.0f, 0.0f, 1.0f)
+                    : settings.tintColor;
+
+            const float colorAmount =
+                showTextureError ? 1.0f : settings.colorTintAmount;
+
+            const float textureTintAmount =
+                showTextureError ? 0.0f : settings.tintTextureAmount;
+            
+            
             
             SetBasicShaderUniforms(
                 shader, modelMatrix, viewMatrices.view, viewMatrices.projection,
-                settings.overrideColor, settings.tintColor, settings.colorTintAmount, useTexture, settings.tintTextureAmount
+                overrideColor, color, colorAmount, useTexture, textureTintAmount
             );
             
             shader.SetBool("uUseLighting", useLighting);

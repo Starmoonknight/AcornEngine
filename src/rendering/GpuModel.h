@@ -4,7 +4,6 @@
 #include "geometry/CpuMeshData.h"
 
 // Standard library
-#include <utility>                      // For std::exchange and std::move
 #include <vector>                       // Mesh data and temporary OBJ attribute lists
 
 // Third-party libraries

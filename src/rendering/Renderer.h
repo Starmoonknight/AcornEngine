@@ -1,7 +1,6 @@
 #pragma once
 
 // Project headers
-#include "ShaderProgram.h"
 
 // Standard library
 #include <vector>                               // Mesh data and temporary OBJ attribute lists
@@ -9,6 +8,10 @@
 // Third-party libraries
 #include <glad/glad.h>                          // GLuint,  Keep glad include before GLFW include 
 #include <glm/glm.hpp>                          // Vectors, matrices, dot and cross products
+
+
+class ShaderProgram;
+struct BasicUniformLocations;
 
 
 
@@ -22,7 +25,7 @@ namespace AcornData
     
     
     // unused for now
-    enum TextureType
+    enum class TextureType
     {
         Diffuse,
         Specular,

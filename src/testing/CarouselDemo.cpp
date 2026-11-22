@@ -8,6 +8,8 @@
 // Standard library
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <filesystem>
 #include <vector>
 
 
@@ -289,7 +291,7 @@ namespace
         // DrawModel handles per-instance visibility.
         // No model or camera animation is advanced here: a camera may
         // need two visible copies, but the world still updates only once.
-        for (const AcornData::RenderModelInstance* model : scene.models)
+        for (const AcornData::RenderModelInstance* model : scene.renderInstances)
         {
             if (model != nullptr)
                 Rendering::DrawModel(shader, matrices, *model);
@@ -352,23 +354,24 @@ namespace Demo
         if (settings.layout ==
             SplitScreenSettings_Extra_Carousel::CarouselGridSplit)
         {
-            // Scene currently stores camera values and borrowed model
-            // pointers. Copying it gives us independent camera/layout data,
-            // but does not duplicate model instances or GPU resources.
-            //
-            // This relies on the current non-owning Scene design.
-            // Revisit the copying strategy if Scene ownership changes.
-            Scene preview = scene;
-            preview.settings.splitScreen = GridSplit;
+            
+            // Temporary preview: owns camera copies and an empty model cache.
+            // Render registrations borrow the original scene's live instances.
+            // Do not call AddObject on this preview or retain it after this draw.
+            Scene preview{std::filesystem::current_path()};
+            preview.cameras = scene.cameras;
+            preview.settings = scene.settings;
+            preview.renderInstances = scene.renderInstances;
+            preview.settings.splitScreen = AcornData::SplitScreenSettings::GridSplit;
 
             // Rebuild the original grid every frame, then apply the shift
             // derived from phase. This avoids accumulating permutations.
-            ConfigureSceneViewports(preview, framebuffer);
+            preview.ConfigureSceneViewports(framebuffer);
             ApplyGridCarousel(preview, settings.phase, framebuffer);
 
             // Each assigned rectangle is a complete camera view, so the
             // normal scene renderer can perform clearing and drawing..
-            DrawScene(preview, shader);
+            preview.DrawScene(shader);
             return;
         }
 
@@ -379,19 +382,20 @@ namespace Demo
             settings.layout ==
             SplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
 
-        // Work on camera copies so the real scene retains its normal
-        // layout. Model pointers still refer to the original instances.
-        //
-        // This allocates/copies temporary containers each frame, which is
-        // acceptable for this experiment but can be optimized later.
-        Scene preview = scene;
+        // Temporary preview: owns camera copies and an empty model cache.
+        // Render registrations borrow the original scene's live instances.
+        // Do not call AddObject on this preview or retain it after this draw.
+        Scene preview{std::filesystem::current_path()};
+        preview.cameras = scene.cameras;
+        preview.settings = scene.settings;
+        preview.renderInstances = scene.renderInstances;
 
         preview.settings.splitScreen =
-            moveSideways ? VerticalSplit : HorizontalSplit;
+            moveSideways ? AcornData::SplitScreenSettings::VerticalSplit : AcornData::SplitScreenSettings::HorizontalSplit;
 
         // Reuse the normal strip layout to obtain sizes and starting
         // positions. Enabled cameras divide the available area.
-        ConfigureSceneViewports(preview, framebuffer);
+        preview.ConfigureSceneViewports(framebuffer);
 
         // One loop travels one whole framebuffer dimension.
         // This is also the spacing between repeated copies.

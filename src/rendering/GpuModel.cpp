@@ -8,6 +8,7 @@
 #include <cassert>                  // assert checks
 #include <cstddef>                  // std::size_t and offsetof for vertex attributes
 #include <limits>                   // std::numeric_limits for bounds checks
+#include <utility>                      // For std::exchange and std::move
 
 
 // Third-party libraries

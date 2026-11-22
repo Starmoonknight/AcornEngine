@@ -12,6 +12,7 @@
 #include <string_view>  // Views of the fields in a face token
 #include <system_error> // std::errc when checking parsed indices
 #include <utility>      // std::move when finishing a mesh
+#include <vector>      
 
 // Third-party libraries
 #include <glm/glm.hpp>          // Vectors, matrices, dot and cross products

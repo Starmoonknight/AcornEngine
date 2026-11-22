@@ -19,7 +19,11 @@ namespace
     
     constexpr glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
     
-    // For Vertical or Horizontal split screen 
+    
+    
+    // Divides the framebuffer into adjacent strips for enabled cameras.
+    // Distributes remainder pixels so the strips cover the full dimension.
+    // Called only with positive framebuffer dimensions and enabledCount > 0.
     void ConfigureStripViewports(
         Scene& scene,
         const FramebufferSize& framebuffer,
@@ -64,6 +68,10 @@ namespace
     }
 
     
+    // Arranges enabled cameras in a roughly square grid.
+    // Centers an incomplete final row. Integer-width cells can leave
+    // unused edge pixels, which DrawScene clears to the frame background.
+    // Called only with positive framebuffer dimensions and enabledCount > 0.
     void ConfigureGridViewports(
     Scene& scene,
     const FramebufferSize& framebuffer,
@@ -123,36 +131,88 @@ namespace
 
 
 
-void AddSceneModel(Scene& scene, AcornData::RenderModelInstance* model)
+
+
+SceneObject* Scene::AddObject(const AcornData::SceneObjectDescription& description,GLuint textureID)
+{
+    // Resolve the source and obtain shared geometry owned by this cache.
+    const auto* geometry = modelCache.GetOrLoad(description.source);
+
+    if (geometry == nullptr)
+        return nullptr;
+
+    // Appending creates the owning object without relocating old objects.
+    SceneObject& object = placedObjects.emplace_back();
+
+    // Keep enough source information to reconstruct it later.
+    object.source = description.source;
+
+    // Configure its runtime instance.
+    object.instance.gpuModel = geometry;
+    object.instance.transform = description.transform;
+    object.instance.renderSettings = description.appearance;
+    object.instance.textureID = textureID; 
+
+    // Expose the instance to rendering without transferring ownership.
+    RegisterRenderInstance(&object.instance);
+
+    return &object;
+}
+
+
+void Scene::Clear()
+{
+    // Remove borrowed addresses before destroying their targets.
+    renderInstances.clear();
+    
+    // Destroy runtime contents before releasing geometry they borrow.
+    cameras.clear();
+    placedObjects.clear();
+    
+    // Release all uploaded cached models, preserves the cache's fixed root.
+    modelCache.Clear();
+    
+    // Forget the previous level's metadata and starting state.
+    settings = AcornData::SceneSettings{};
+    name.clear();
+    sceneID = -1;
+    playerStarts = {};
+    goalPosition = glm::vec3(0.0f);
+}
+
+
+
+void Scene::RegisterRenderInstance(AcornData::RenderModelInstance* model)
 {
     if (model == nullptr)
         return;
     
-    // searches the list for the pointer value supplied as model, 
-    // if this model’s address is not already registered, append it.
-    if (std::find(scene.models.begin(), scene.models.end(), model)
-        == scene.models.end())                          // if there is no match, it returns end()
+    
+    // Compare addresses, not instance contents.
+    // Different instances may share geometry and still need separate draws.
+    if (std::find(renderInstances.begin(), renderInstances.end(), model)
+        == renderInstances.end())                          // if there is no match, it returns end()
     {
-        scene.models.push_back(model);
+        renderInstances.push_back(model);
     }
 }
 
 
-void RemoveSceneModel(Scene& scene, AcornData::RenderModelInstance* model)
+void Scene::UnregisterRenderInstance(AcornData::RenderModelInstance* model)
 {
     // Removes every list entry whose pointer value equals model.
     // Only erases the stored pointer, object cleanup is handled by owner 
-    std::erase(scene.models, model);
+    std::erase(renderInstances, model);
 }
 
 
 
-void ConfigureSceneViewports(Scene& scene, const FramebufferSize& framebuffer)
+void Scene::ConfigureSceneViewports(const FramebufferSize& framebuffer)
 {
     
     int enabledCount = 0;
     
-    for (SceneCamera& sceneCamera : scene.cameras)
+    for (SceneCamera& sceneCamera : cameras)
     {
         // Clear any rectangle left from the previous layout.
         sceneCamera.camera.SetViewport(0, 0, 0, 0);
@@ -167,21 +227,21 @@ void ConfigureSceneViewports(Scene& scene, const FramebufferSize& framebuffer)
         return;
     }
     
-    switch (scene.settings.splitScreen)
+    switch (settings.splitScreen)
     {
-    case VerticalSplit:
+    case AcornData::SplitScreenSettings::VerticalSplit:
         ConfigureStripViewports(
-            scene, framebuffer, enabledCount, true);
+            *this, framebuffer, enabledCount, true);
         break;
 
-    case HorizontalSplit:
+    case AcornData::SplitScreenSettings::HorizontalSplit:
         ConfigureStripViewports(
-            scene, framebuffer, enabledCount, false);
+            *this, framebuffer, enabledCount, false);
         break;
 
-    case GridSplit:
+    case AcornData::SplitScreenSettings::GridSplit:
         ConfigureGridViewports(
-            scene, framebuffer, enabledCount);
+            *this, framebuffer, enabledCount);
         break;
     }    
 }
@@ -189,7 +249,7 @@ void ConfigureSceneViewports(Scene& scene, const FramebufferSize& framebuffer)
 
 
 
-void UpdateScene(Scene& scene, float deltaTime)
+void Scene::UpdateScene(float deltaTime)
 {
     
     
@@ -200,7 +260,7 @@ void UpdateScene(Scene& scene, float deltaTime)
 
 
 
-void DrawScene(const Scene& scene, const ShaderProgram& shader)
+void Scene::DrawScene(const ShaderProgram& shader)
 {
     // Establish a clean whole-frame background first.
     // This also gives a defined result if every camera is disabled.
@@ -213,7 +273,7 @@ void DrawScene(const Scene& scene, const ShaderProgram& shader)
     
     
     
-    for (const SceneCamera& sceneCamera : scene.cameras)
+    for (const SceneCamera& sceneCamera : cameras)
     {
         if (!sceneCamera.enabled ||
             !sceneCamera.camera.HasValidViewport())
@@ -247,7 +307,7 @@ void DrawScene(const Scene& scene, const ShaderProgram& shader)
         const Rendering::CameraMatrices cameraMatrices = sceneCamera.camera.GetMatrices(); 
         
         
-        for (const AcornData::RenderModelInstance* model : scene.models)
+        for (const AcornData::RenderModelInstance* model : renderInstances)
         {
             if (model != nullptr)
             {
@@ -260,3 +320,79 @@ void DrawScene(const Scene& scene, const ShaderProgram& shader)
     // Later rendering should not inherit the last camera's restriction.
     glDisable(GL_SCISSOR_TEST);
 }
+
+
+
+
+
+
+
+bool LoadSceneFromDescription(
+    Scene& destination, 
+    const AcornData::SceneDescription& description)
+{
+    // Deliberate policy: fully unload the old level before loading this one.
+    destination.Clear();
+    
+    destination.name = description.name;
+    destination.sceneID = description.sceneID;
+    destination.settings = description.settings;
+    destination.playerStarts = description.playerStarts;
+    destination.goalPosition = description.goalPosition;
+    
+    // Temporary viewpoints until Player objects control these cameras.
+    destination.cameras.resize(description.playerStarts.size());
+    
+    
+    for (std::size_t i = 0; i < description.playerStarts.size(); ++i)
+    {
+        const auto& start = description.playerStarts[i];
+        SceneCamera& view = destination.cameras[i];
+
+        // set up players camera 
+        view.ID = static_cast<int>(i);
+        view.enabled = true;
+        view.backgroundColor =
+            description.settings.defaultBackgroundColor;
+
+        view.camera.SetPosition(start.position);
+        view.camera.SetRotationDegrees(start.rotationDegrees);
+    }
+    
+    // Currently level fails if objects don't load. 
+    // Maybe chang to warning later, allow scenes with missing models? 
+    for (const auto& objectDescription : description.objects)
+    {
+        if (destination.AddObject(objectDescription) == nullptr)
+        {
+            // Do not leave a partially constructed level active.
+            destination.Clear();
+            return false;
+        }
+    }
+    
+    return true;
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

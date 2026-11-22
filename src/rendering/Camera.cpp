@@ -1,6 +1,9 @@
 #include "Camera.h"
 
 
+// Project headers
+#include "AcornMath.h"
+
 // Standard library
 #include <cassert>
 #include <cmath>
