@@ -1,0 +1,58 @@
+version 1
+scene "Demo 2"
+id 1
+background 0.649999976 0.850000024 0.980000019
+split vertical
+player 0 -2 2 8 0 0 0
+player 1 2 2 8 0 0 0
+goal 5 0 -5
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -3 0 -3
+rotation 0 0 0
+scale 1 1 1
+color 0.200000003 0.899999976 0.200000003
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 0 0 -3
+rotation 0 0 0
+scale 1 1 1
+color 0.200000003 0.899999976 0.200000003
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 3 0 -3
+rotation 0 0 0
+scale 1 1 1
+color 0.200000003 0.899999976 0.200000003
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/plane/plane.obj"
+import assimp 0 0
+position 0 -10 0
+rotation 0 0 0
+scale 30 1 30
+color 0.75 0.75 0.75
+texture "textures/cobblestone_floor_07_diff_4k.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 0 -5
+rotation 0 0 0
+scale 0.300000012 0.300000012 0.300000012
+color 1 1 0
+texture ""
+flags 1 1 0 0
+tint 1 0

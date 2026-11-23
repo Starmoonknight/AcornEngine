@@ -628,10 +628,26 @@ namespace Demo
     
     
     
+    // --------------- Making Scenes --------------------
+    
+    // Structs to make a scene, that will then be used to save a scene as a file, 
+    // that can then be used to load scenes instead of using these hardcode structs. 
     
     
+    struct ForestScene
+    {
+        static AcornData::SceneDescription Build();
+    };
+
+    struct TeapotScene
+    {
+        static AcornData::SceneDescription Build();
+    };
     
-    
+    struct PillarScene
+    {
+        static AcornData::SceneDescription Build();
+    };
     
 }
 

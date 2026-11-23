@@ -29,4 +29,5 @@ namespace Palette
 
     inline const glm::vec3 black       {0.0f,  0.0f,  0.0f};
     inline const glm::vec3 white       {1.0f,  1.0f,  1.0f};
+    inline const glm::vec3 grey       {0.75f};
 }

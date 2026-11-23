@@ -1,0 +1,558 @@
+version 1
+scene "Basalt Gallery"
+id 2
+background 0.349999994 0.419999987 0.5
+split vertical
+player 0 -25 -10.3231382 25 0 0 0
+player 1 -15 -9.68074799 25 0 0 0
+goal 25 -9.7555151 -25
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -25 -14.6615696 25
+rotation 0 0 0
+scale 10 6.67686176 10
+color 0.150000006 0.150000006 0.150000006
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -15 -14.340374 25
+rotation 0 0 0
+scale 10 7.31925249 10
+color 0.150000006 0.150000006 0.150000006
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -5 -12.801322 25
+rotation 0 0 0
+scale 10 10.397356 10
+color 0.150000006 0.150000006 0.150000006
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 -14.1176395 25
+rotation 0 0 0
+scale 10 7.76472092 10
+color 0.150000006 0.150000006 0.150000006
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 15 -13.2537479 25
+rotation 0 0 0
+scale 10 9.49250412 10
+color 0.150000006 0.150000006 0.150000006
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -13.5757446 25
+rotation 0 0 0
+scale 10 8.84851074 10
+color 0.150000006 0.150000006 0.150000006
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -25 -13.6150208 15
+rotation 0 0 0
+scale 10 8.76995754 10
+color 0.270000011 0.270000011 0.270000011
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -15 -14.2271929 15
+rotation 0 0 0
+scale 10 7.54561424 10
+color 0.270000011 0.270000011 0.270000011
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -5 -12.520133 15
+rotation 0 0 0
+scale 10 10.959734 10
+color 0.270000011 0.270000011 0.270000011
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 -13.0746727 15
+rotation 0 0 0
+scale 10 9.85065556 10
+color 0.270000011 0.270000011 0.270000011
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 15 -13.894599 15
+rotation 0 0 0
+scale 10 8.21080208 10
+color 0.270000011 0.270000011 0.270000011
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -14.8411522 15
+rotation 0 0 0
+scale 10 6.31769609 10
+color 0.270000011 0.270000011 0.270000011
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -25 -13.0455513 5
+rotation 0 0 0
+scale 10 9.9088974 10
+color 0.390000015 0.390000015 0.390000015
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -15 -12.3841419 5
+rotation 0 0 0
+scale 10 11.2317152 10
+color 0.390000015 0.390000015 0.390000015
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -5 -13.3237429 5
+rotation 0 0 0
+scale 10 9.35251427 10
+color 0.390000015 0.390000015 0.390000015
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 -13.0987587 5
+rotation 0 0 0
+scale 10 9.80248165 10
+color 0.390000015 0.390000015 0.390000015
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 15 -14.5343971 5
+rotation 0 0 0
+scale 10 6.9312067 10
+color 0.390000015 0.390000015 0.390000015
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -13.0171309 5
+rotation 0 0 0
+scale 10 9.9657383 10
+color 0.390000015 0.390000015 0.390000015
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -25 -14.134737 -5
+rotation 0 0 0
+scale 10 7.73052502 10
+color 0.50999999 0.50999999 0.50999999
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -15 -14.0513687 -5
+rotation 0 0 0
+scale 10 7.89726353 10
+color 0.50999999 0.50999999 0.50999999
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -5 -12.4980564 -5
+rotation 0 0 0
+scale 10 11.0038881 10
+color 0.50999999 0.50999999 0.50999999
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 -14.7976742 -5
+rotation 0 0 0
+scale 10 6.40465164 10
+color 0.50999999 0.50999999 0.50999999
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 15 -13.9294472 -5
+rotation 0 0 0
+scale 10 8.1411047 10
+color 0.50999999 0.50999999 0.50999999
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -13.2234278 -5
+rotation 0 0 0
+scale 10 9.55314445 10
+color 0.50999999 0.50999999 0.50999999
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -25 -13.5545902 -15
+rotation 0 0 0
+scale 10 8.8908186 10
+color 0.629999995 0.629999995 0.629999995
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -15 -13.1131954 -15
+rotation 0 0 0
+scale 10 9.77360821 10
+color 0.629999995 0.629999995 0.629999995
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -5 -12.3272457 -15
+rotation 0 0 0
+scale 10 11.3455086 10
+color 0.629999995 0.629999995 0.629999995
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 -12.5665894 -15
+rotation 0 0 0
+scale 10 10.8668203 10
+color 0.629999995 0.629999995 0.629999995
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 15 -14.7921982 -15
+rotation 0 0 0
+scale 10 6.41560268 10
+color 0.629999995 0.629999995 0.629999995
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -14.8604231 -15
+rotation 0 0 0
+scale 10 6.27915335 10
+color 0.629999995 0.629999995 0.629999995
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -25 -14.9932785 -25
+rotation 0 0 0
+scale 10 6.01344395 10
+color 0.75 0.75 0.75
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -15 -12.2658501 -25
+rotation 0 0 0
+scale 10 11.4682999 10
+color 0.75 0.75 0.75
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position -5 -13.9324169 -25
+rotation 0 0 0
+scale 10 8.13516617 10
+color 0.75 0.75 0.75
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 5 -12.2631855 -25
+rotation 0 0 0
+scale 10 11.47363 10
+color 0.75 0.75 0.75
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 15 -13.7019711 -25
+rotation 0 0 0
+scale 10 8.59605694 10
+color 0.75 0.75 0.75
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -14.377758 -25
+rotation 0 0 0
+scale 10 7.2444849 10
+color 0.75 0.75 0.75
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/backpack/backpack.obj"
+import assimp 1 0
+position 5 -6.40934467 15
+rotation 0 23.0734558 0
+scale 1 1 1
+color 0.5 0.5 0.5
+texture "models/backpack/diffuse.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/backpack/backpack.obj"
+import assimp 1 0
+position -5 -5.30026627 15
+rotation 0 97.8568344 0
+scale 1 1 1
+color 0.5 0.5 0.5
+texture "models/backpack/diffuse.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/backpack/backpack.obj"
+import assimp 1 0
+position 5 -4.78637028 -25
+rotation 0 118.928741 0
+scale 1 1 1
+color 0.5 0.5 0.5
+texture "models/backpack/diffuse.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 25 -9.15148926 25
+rotation 0 103.605064 0
+scale 0.0250000004 0.0250000004 0.0250000004
+color 0.5 0.5 0.5
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 0
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 15 -9.40394306 -25
+rotation 0 242.352325 0
+scale 0.0250000004 0.0250000004 0.0250000004
+color 0.5 0.5 0.5
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 0
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 15 -8.50749588 25
+rotation 0 359.577271 0
+scale 0.0250000004 0.0250000004 0.0250000004
+color 0.5 0.5 0.5
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 0
+
+object "models/lpshead/head.OBJ"
+import assimp 1 0
+position -5 -3.89611197 -5
+rotation 0 128.797012 0
+scale 10 10 10
+color 0.5 0.5 0.5
+texture "models/lpshead/rendered.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/lpshead/head.OBJ"
+import assimp 1 0
+position 5 -4.03317976 -15
+rotation 0 16.5687351 0
+scale 10 10 10
+color 0.5 0.5 0.5
+texture "models/lpshead/rendered.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/lpshead/head.OBJ"
+import assimp 1 0
+position -5 -5.54748583 5
+rotation 0 54.5164795 0
+scale 10 10 10
+color 0.5 0.5 0.5
+texture "models/lpshead/rendered.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -25 -8.12140274 5
+rotation 0 5.42701006 0
+scale 0.00999999978 0.00999999978 0.00999999978
+color 0.5 0.5 0.5
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -15 -6.56200027 -25
+rotation 0 261.480286 0
+scale 0.00999999978 0.00999999978 0.00999999978
+color 0.5 0.5 0.5
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -5 -6.68479156 -15
+rotation 0 1.68472767 0
+scale 0.00999999978 0.00999999978 0.00999999978
+color 0.5 0.5 0.5
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0
+
+object "models/sportsCar/sportsCar.obj"
+import assimp 0 0
+position 5 -8.19751835 5
+rotation 0 286.485901 0
+scale 1 1 1
+color 0.899999976 0.0399999991 0.0299999993
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/sportsCar/sportsCar.obj"
+import assimp 0 0
+position 25 -8.44685555 -5
+rotation 0 258.206848 0
+scale 1 1 1
+color 0.899999976 0.0399999991 0.0299999993
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/sportsCar/sportsCar.obj"
+import assimp 0 0
+position 25 -8.0342617 5
+rotation 0 334.090515 0
+scale 1 1 1
+color 0.899999976 0.0399999991 0.0299999993
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/suzanne/suzanne.obj"
+import assimp 0 0
+position -5 -6.62264395 25
+rotation 0 170.605804 0
+scale 1 1 1
+color 0.400000006 0.150000006 0.850000024
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/suzanne/suzanne.obj"
+import assimp 0 0
+position -15 -5.78828478 5
+rotation 0 97.6630096 0
+scale 1 1 1
+color 1 0.0500000007 0.0500000007
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/suzanne/suzanne.obj"
+import assimp 0 0
+position -15 -7.24639177 -15
+rotation 0 346.940308 0
+scale 1 1 1
+color 1 0.899999976 0.0500000007
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 25 -9.7555151 -25
+rotation 0 0 0
+scale 0.300000012 0.300000012 0.300000012
+color 1 1 0
+texture ""
+flags 1 1 0 0
+tint 1 0

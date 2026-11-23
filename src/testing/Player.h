@@ -23,14 +23,20 @@ struct Player
     // Local offset from player origin to the eyes.
     glm::vec3 eyeOffset{0.0f, 0.75f, 0.0f};
 
-    float moveSpeed = 5.0f;
+    float moveSpeed = 8.0f;
     float lookSpeed = 90.0f; // Degrees per second.
 
     // Owned instance; geometry and texture remain borrowed.
     //  - geometry is in the scene cache 
     //  - texture is applied through hard coded for now  
     AcornData::RenderModelInstance body;
-
+    
+    // Converts the imported model's facing direction into our -Z-forward
+    // convention. Change this per model; identity means no correction.
+    glm::quat modelOrientationCorrection{
+        1.0f, 0.0f, 0.0f, 0.0f
+    };
+    
     void SyncViewAndBody(Rendering::CameraData& camera)
     {
         camera.SetOrientation(orientation);
@@ -41,9 +47,16 @@ struct Player
 
         body.transform.position = position;
 
-        // Derived only for the existing Euler-based model renderer.
-        // The quaternion remains the authoritative orientation.
-        body.transform.rotationDegrees = camera.GetRotationDegrees();
+        
+        // First correct the imported model's local axes,
+        // then apply the player's world orientation.
+        const glm::quat bodyOrientation =
+            orientation * modelOrientationCorrection;
+        
+        Rendering::CameraData bodyPose;
+        bodyPose.SetOrientation(bodyOrientation);
+
+        body.transform.rotationDegrees = bodyPose.GetRotationDegrees();
     }
 
     void Update(

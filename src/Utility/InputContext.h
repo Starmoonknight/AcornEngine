@@ -108,6 +108,8 @@ namespace Demo
         bool toggleMultiplayer = false;
         
         bool toggleCarousel = false;
+        
+        bool saveScene = false;
 
         std::optional<std::size_t> requestedScene;
         std::array<Input::PlayerInput, 2> players{};
@@ -125,13 +127,21 @@ namespace Demo
         result.toggleMultiplayer = input.Key(GLFW_KEY_M).pressed;
         
         result.toggleCarousel = input.Key(GLFW_KEY_0).pressed;
-
+        
+        //result.saveScene = input.Key(GLFW_KEY_F5).pressed;
+        
         if (input.Key(GLFW_KEY_1).pressed)
             result.requestedScene = 0;
         else if (input.Key(GLFW_KEY_2).pressed)
             result.requestedScene = 1;
         else if (input.Key(GLFW_KEY_3).pressed)
             result.requestedScene = 2;
+        else if (input.Key(GLFW_KEY_4).pressed)
+            result.requestedScene = 3;
+        else if (input.Key(GLFW_KEY_5).pressed)
+            result.requestedScene = 4;
+        else if (input.Key(GLFW_KEY_6).pressed)
+            result.requestedScene = 5;
 
         result.players[0] = Input::ReadPlayerInput(input, player1Bindings);
         result.players[1] = Input::ReadPlayerInput(input, player2Bindings);

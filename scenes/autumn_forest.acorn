@@ -1,0 +1,648 @@
+version 1
+scene "Autumn Forest"
+id 0
+background 0.449999988 0.550000012 0.649999976
+split vertical
+player 0 -3 -9 48 0 0 0
+player 1 3 -9 48 0 0 0
+goal 0 -9 -25
+
+object "models/plane/plane.obj"
+import assimp 0 0
+position 0 -10 0
+rotation 0 0 0
+scale 60 1 60
+color 0.5 0.5 0.5
+texture "textures/cobblestone_floor_07_diff_4k.jpg"
+flags 1 1 1 1
+tint 1 0
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -42.4192352 -10.0281219 33.8696098
+rotation 0 94.5201263 0
+scale 0.00928125344 0.00928125344 0.00928125344
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -25.1748409 -10.0341854 33.9690475
+rotation 0 301.462646 0
+scale 0.0112821683 0.0112821683 0.0112821683
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -9.3033762 -10.0357552 35.0184975
+rotation 0 314.565063 0
+scale 0.011800372 0.011800372 0.011800372
+color 0.949999988 0.150000006 0.100000001
+texture ""
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 5.74067879 -10.0260754 37.0715027
+rotation 0 179.017792 0
+scale 0.00860576984 0.00860576984 0.00860576984
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 25.9122314 -10.0270357 38.8235588
+rotation 0 246.773834 0
+scale 0.00892269984 0.00892269984 0.00892269984
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 40.3094177 -10.0358095 34.9415817
+rotation 0 354.045868 0
+scale 0.0118181827 0.0118181827 0.0118181827
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -37.9821014 -10.0272379 26.156004
+rotation 0 322.397705 0
+scale 0.00898946729 0.00898946729 0.00898946729
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -24.1634979 -10.0262613 28.7691956
+rotation 0 214.236603 0
+scale 0.00866716355 0.00866716355 0.00866716355
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -7.3338213 -10.0272112 25.7414455
+rotation 0 156.819336 0
+scale 0.00898060761 0.00898060761 0.00898060761
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 8.95726585 -10.0324116 29.4093437
+rotation 0 146.312744 0
+scale 0.0106967855 0.0106967855 0.0106967855
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 23.1441689 -10.0292912 27.7485695
+rotation 0 59.6827354 0
+scale 0.00966718793 0.00966718793 0.00966718793
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 37.7770615 -10.0341625 27.919241
+rotation 0 7.93262243 0
+scale 0.0112748044 0.0112748044 0.0112748044
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -38.8351669 -10.029747 17.6119308
+rotation 0 167.203506 0
+scale 0.00981754716 0.00981754716 0.00981754716
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -23.5212936 -10.0283527 21.8638115
+rotation 0 182.033432 0
+scale 0.00935721584 0.00935721584 0.00935721584
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -10.83249 -10.0356302 20.9309807
+rotation 0 130.907257 0
+scale 0.0117592486 0.0117592486 0.0117592486
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 8.45894051 -10.0308313 20.7816925
+rotation 0 82.9066086 0
+scale 0.0101754237 0.0101754237 0.0101754237
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 22.9997787 -10.0248947 18.0437241
+rotation 0 69.9273148 0
+scale 0.00821611937 0.00821611937 0.00821611937
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 38.2031288 -10.0251713 20.0639648
+rotation 0 201.523056 0
+scale 0.00830722228 0.00830722228 0.00830722228
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -41.8598518 -10.031146 12.2451687
+rotation 0 137.721237 0
+scale 0.010279364 0.010279364 0.010279364
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -26.8469238 -10.0332603 11.0461235
+rotation 0 18.7701836 0
+scale 0.0109770037 0.0109770037 0.0109770037
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -9.48134136 -10.029706 10.1498222
+rotation 0 152.066208 0
+scale 0.00980401132 0.00980401132 0.00980401132
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 8.51985645 -10.0346537 12.2528095
+rotation 0 151.19696 0
+scale 0.0114369318 0.0114369318 0.0114369318
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 26.481369 -10.0309458 14.9112797
+rotation 0 184.378052 0
+scale 0.0102131432 0.0102131432 0.0102131432
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 39.8880196 -10.0308399 13.121479
+rotation 0 65.0577698 0
+scale 0.0101780891 0.0101780891 0.0101780891
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -38.3881073 -10.0317945 5.87739944
+rotation 0 189.015503 0
+scale 0.0104931202 0.0104931202 0.0104931202
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -24.687315 -10.0324574 4.33333683
+rotation 0 182.943481 0
+scale 0.0107120378 0.0107120378 0.0107120378
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -6.06968927 -10.0256252 5.56745338
+rotation 0 180.08313 0
+scale 0.00845722761 0.00845722761 0.00845722761
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 10.3947754 -10.0291176 2.20637965
+rotation 0 157.332367 0
+scale 0.0096097067 0.0096097067 0.0096097067
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 24.7621078 -10.0302773 2.41825986
+rotation 0 314.373901 0
+scale 0.00999239087 0.00999239087 0.00999239087
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 40.9795609 -10.0288248 2.33692074
+rotation 0 278.219849 0
+scale 0.00951326266 0.00951326266 0.00951326266
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -41.2710724 -10.0289488 -4.54371738
+rotation 0 297.598572 0
+scale 0.00955410674 0.00955410674 0.00955410674
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -21.2689667 -10.0304632 -6.11216784
+rotation 0 300.698486 0
+scale 0.0100539764 0.0100539764 0.0100539764
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -5.62415457 -10.0341816 -5.10272884
+rotation 0 303.31427 0
+scale 0.0112811429 0.0112811429 0.0112811429
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 9.31409645 -10.0355768 -6.5130806
+rotation 0 171.774841 0
+scale 0.0117414426 0.0117414426 0.0117414426
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 26.8950577 -10.030653 -2.19595671
+rotation 0 267.329163 0
+scale 0.0101165911 0.0101165911 0.0101165911
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 37.7057037 -10.0318766 -5.27696705
+rotation 0 104.722237 0
+scale 0.0105203409 0.0105203409 0.0105203409
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -40.919239 -10.0332489 -14.4755344
+rotation 0 140.940338 0
+scale 0.0109732421 0.0109732421 0.0109732421
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -23.4822769 -10.0277433 -9.12221622
+rotation 0 9.63123322 0
+scale 0.00915634632 0.00915634632 0.00915634632
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -5.55394888 -10.0272264 -9.54527283
+rotation 0 318.346649 0
+scale 0.00898550637 0.00898550637 0.00898550637
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 6.14692497 -10.0349016 -10.5953026
+rotation 0 128.20639 0
+scale 0.0115186274 0.0115186274 0.0115186274
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 23.6442261 -10.0313597 -10.6654472
+rotation 0 166.231369 0
+scale 0.0103496881 0.0103496881 0.0103496881
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 40.4410248 -10.0313883 -11.4705257
+rotation 0 256.613373 0
+scale 0.0103592398 0.0103592398 0.0103592398
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -42.0378456 -10.0344887 -17.9009018
+rotation 0 333.748138 0
+scale 0.0113823414 0.0113823414 0.0113823414
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -21.5265846 -10.0304632 -21.9565792
+rotation 0 301.293091 0
+scale 0.010053847 0.010053847 0.010053847
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -6.00742388 -10.0294895 -21.8236752
+rotation 0 70.5889206 0
+scale 0.00973248482 0.00973248482 0.00973248482
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 9.9864893 -10.0318336 -17.1797218
+rotation 0 39.7879944 0
+scale 0.0105062928 0.0105062928 0.0105062928
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 24.7253952 -10.0261717 -21.1344929
+rotation 0 232.657532 0
+scale 0.00863760058 0.00863760058 0.00863760058
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 41.9751244 -10.024827 -21.5340347
+rotation 0 117.659752 0
+scale 0.00819364376 0.00819364376 0.00819364376
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -41.1573257 -10.0294962 -29.1994762
+rotation 0 194.730835 0
+scale 0.0097348243 0.0097348243 0.0097348243
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -25.7601547 -10.0316458 -27.9728661
+rotation 0 275.45517 0
+scale 0.0104439948 0.0104439948 0.0104439948
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -7.99405575 -10.0275764 -26.5460911
+rotation 0 120.583214 0
+scale 0.00910113659 0.00910113659 0.00910113659
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 9.47364521 -10.0268288 -30.5613899
+rotation 0 243.647507 0
+scale 0.00885425881 0.00885425881 0.00885425881
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 25.6224937 -10.0320444 -29.7077274
+rotation 0 247.973679 0
+scale 0.0105755581 0.0105755581 0.0105755581
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 42.2221031 -10.033761 -26.863039
+rotation 0 222.380707 0
+scale 0.0111423656 0.0111423656 0.0111423656
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -42.0414505 -10.0324936 -35.7420349
+rotation 0 193.249771 0
+scale 0.010723847 0.010723847 0.010723847
+color 1 0.850000024 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -21.9327698 -10.0249281 -35.6587105
+rotation 0 312.213409 0
+scale 0.00822697766 0.00822697766 0.00822697766
+color 1 0.550000012 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position -7.08706856 -10.0250454 -37.5088882
+rotation 0 295.815186 0
+scale 0.00826595165 0.00826595165 0.00826595165
+color 0.949999988 0.150000006 0.100000001
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 9.67147923 -10.0253592 -38.7544327
+rotation 0 68.2853546 0
+scale 0.00836940296 0.00836940296 0.00836940296
+color 0.800000012 0.100000001 0.25
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 23.864027 -10.0347834 -36.7088585
+rotation 0 303.385468 0
+scale 0.0114797717 0.0114797717 0.0114797717
+color 1 0.349999994 0.600000024
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/pine/scrubPine.obj"
+import assimp 1 0
+position 37.8684425 -10.0290308 -38.6436577
+rotation 0 7.38832712 0
+scale 0.00958126504 0.00958126504 0.00958126504
+color 1 0.649999976 0.75
+texture "models/pine/LushPine.png"
+flags 1 1 1 1
+tint 1 0.75
+
+object "models/sportsCar/sportsCar.obj"
+import assimp 0 0
+position -11.5406895 -10 -20.7232056
+rotation 0 98.2280731 0
+scale 1 1 1
+color 0.899999976 0.0399999991 0.0299999993
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/sportsCar/sportsCar.obj"
+import assimp 0 0
+position -4.64218712 -10 5.00714874
+rotation 0 175.671722 0
+scale 1 1 1
+color 0.899999976 0.0399999991 0.0299999993
+texture ""
+flags 1 1 0 1
+tint 1 0
+
+object "models/cube/cube.obj"
+import assimp 0 0
+position 0 -9 -25
+rotation 0 0 0
+scale 0.300000012 0.300000012 0.300000012
+color 1 1 0
+texture ""
+flags 1 1 0 0
+tint 1 0

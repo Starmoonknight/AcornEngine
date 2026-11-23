@@ -1,0 +1,808 @@
+version 1
+scene "Find the Green Teapot"
+id 1
+background 0.0599999987 0.0799999982 0.140000001
+split horizontal
+player 0 -2 0 0 0 0 0
+player 1 2 0 0 0 0 0
+goal 6.2508893 7.81898451 4.28809977
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 14.1817551 -6.84137821 -14.1960058
+rotation -13.567337 -116.129868 154.381439
+scale 0.0131279398 0.0131279398 0.0131279398
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 7.16425705 -8.68013573 -7.21805382
+rotation -121.435471 -76.2152252 133.380554
+scale 0.0167788435 0.0167788435 0.0167788435
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 0.440221786 10.0079041 9.4332428
+rotation -70.5855942 126.732086 106.325226
+scale 0.0389320441 0.0389320441 0.0389320441
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 4.74832153 -7.23540115 12.9398956
+rotation -74.3892212 -108.183273 46.8697968
+scale 0.0415345877 0.0415345877 0.0415345877
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -17.9984741 -5.03508568 21.2854385
+rotation -14.5289307 -163.556946 106.981903
+scale 0.0142303659 0.0142303659 0.0142303659
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 17.5838661 17.1944389 10.8056564
+rotation 150.915771 130.233337 -121.16478
+scale 0.0129966931 0.0129966931 0.0129966931
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 3.89059258 -12.6881886 24.9153976
+rotation -136.213135 169.469482 159.743195
+scale 0.0150463032 0.0150463032 0.0150463032
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 13.6430511 19.0317001 13.5452461
+rotation 128.10144 75.6687469 96.6358948
+scale 0.021887945 0.021887945 0.021887945
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 5.46995735 15.3602066 -2.38578415
+rotation -121.754089 169.800812 -19.8772736
+scale 0.0305829477 0.0305829477 0.0305829477
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -4.9998188 -10.8006048 -11.7436438
+rotation -62.4960098 43.588562 98.9518738
+scale 0.0305413734 0.0305413734 0.0305413734
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 19.988121 2.65847778 23.6731148
+rotation 146.741882 -24.6261902 9.52282715
+scale 0.0232436471 0.0232436471 0.0232436471
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -21.7278633 -17.9177132 -2.57467079
+rotation 20.7756348 -119.403595 -174.645798
+scale 0.0359040387 0.0359040387 0.0359040387
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 23.4680328 9.65337372 -6.26033211
+rotation 56.2870331 -17.1573639 -59.8909836
+scale 0.0408041291 0.0408041291 0.0408041291
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -5.24925232 5.19638252 -23.3485394
+rotation -10.0257263 34.1548615 127.033508
+scale 0.0345436521 0.0345436521 0.0345436521
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -23.9150047 -15.9332104 14.8029404
+rotation 151.385773 13.8265533 89.9481506
+scale 0.0370897539 0.0370897539 0.0370897539
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 6.19738007 0.756710052 12.940834
+rotation 87.5081177 -3.04789734 29.7205658
+scale 0.0191423595 0.0191423595 0.0191423595
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 16.5866661 18.5447731 -1.32285118
+rotation 4.61642456 -139.399765 -12.9234619
+scale 0.0258582421 0.0258582421 0.0258582421
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 6.95473862 8.34331322 4.36860275
+rotation -178.059769 28.2455902 -59.0267944
+scale 0.0221221726 0.0221221726 0.0221221726
+color 0.0500000007 1 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -19.4950638 15.4814835 24.7453384
+rotation -173.600586 -17.299469 -64.867424
+scale 0.0240876917 0.0240876917 0.0240876917
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 9.79348755 -12.5472527 -13.2608299
+rotation 61.5857697 -12.6388855 -150.297455
+scale 0.0136454776 0.0136454776 0.0136454776
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 16.19981 -17.872427 -8.39910507
+rotation -103.26033 -136.615479 -23.1255951
+scale 0.0428153425 0.0428153425 0.0428153425
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 0.193351746 12.6473274 7.31359482
+rotation -152.756348 37.2763062 -139.369446
+scale 0.0129300328 0.0129300328 0.0129300328
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -18.8354034 1.74117279 -17.9018059
+rotation 4.10328674 124.27066 -61.1593628
+scale 0.0373265482 0.0373265482 0.0373265482
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 16.2152138 -0.83575058 16.7906456
+rotation 37.821579 -25.090332 -115.224419
+scale 0.020434944 0.020434944 0.020434944
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 8.18896866 -12.6533842 11.6858215
+rotation 65.9084015 52.8378601 -92.633049
+scale 0.032878112 0.032878112 0.032878112
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -21.5645409 -16.0929031 -23.6248341
+rotation 42.8344421 121.224548 -177.314438
+scale 0.0310839713 0.0310839713 0.0310839713
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 9.96231079 14.8495979 -3.48368645
+rotation -22.8859558 -101.705437 148.888184
+scale 0.0266896971 0.0266896971 0.0266896971
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 8.97585297 15.8624992 -18.3745918
+rotation -20.5996857 -148.463699 -155.474655
+scale 0.0170067623 0.0170067623 0.0170067623
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 3.45902824 19.7499962 -17.688036
+rotation 144.69751 86.1053772 -44.6771851
+scale 0.0157938171 0.0157938171 0.0157938171
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 2.67520523 -17.2882614 20.3789673
+rotation -66.8092346 -120.001862 -136.460281
+scale 0.0220449101 0.0220449101 0.0220449101
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 19.9642372 -12.4266052 12.8876228
+rotation 93.8692017 171.319885 62.2429504
+scale 0.0411901884 0.0411901884 0.0411901884
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 11.2696152 -12.3973103 18.7903214
+rotation -105.629486 -135.138611 65.8151398
+scale 0.0383198634 0.0383198634 0.0383198634
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 19.2364883 -9.28637695 -22.7502041
+rotation 87.7323914 92.1386108 -103.825371
+scale 0.0230487566 0.0230487566 0.0230487566
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 5.35760307 -5.13423443 23.694561
+rotation 105.368042 167.324493 64.0693512
+scale 0.0405658036 0.0405658036 0.0405658036
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 17.4632111 15.800457 7.73360062
+rotation 177.694885 -48.1132355 -70.6005707
+scale 0.0349465869 0.0349465869 0.0349465869
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -23.5345993 3.17144394 -18.6045742
+rotation 115.890259 -20.7781982 -54.6579514
+scale 0.0377623849 0.0377623849 0.0377623849
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -17.6640244 -6.15124893 18.9365845
+rotation -138.002167 -178.74176 165.839081
+scale 0.0151685374 0.0151685374 0.0151685374
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -24.4149742 -3.941082 -16.7397861
+rotation -63.120575 149.761871 -175.779602
+scale 0.0386207998 0.0386207998 0.0386207998
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 10.2283325 -7.42300034 -15.0571289
+rotation -110.615288 109.288483 -45.2978058
+scale 0.0234196372 0.0234196372 0.0234196372
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 4.51198196 17.4677124 14.007122
+rotation 95.4749756 74.2396851 42.9829102
+scale 0.0196522661 0.0196522661 0.0196522661
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -2.67659187 -7.34824181 -7.32685661
+rotation -76.0055389 -143.173676 -19.4243164
+scale 0.0297296178 0.0297296178 0.0297296178
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -8.55509377 4.43463516 2.25039673
+rotation 65.5276489 154.116394 -88.2491379
+scale 0.0404117964 0.0404117964 0.0404117964
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -15.7878075 -0.481184006 11.3932648
+rotation 143.412262 -72.6049271 -122.741806
+scale 0.0284340512 0.0284340512 0.0284340512
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 15.4193802 -5.76353073 20.2844124
+rotation -118.860718 -179.680878 144.619415
+scale 0.0204704013 0.0204704013 0.0204704013
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 7.63533401 -0.562602997 -14.1955013
+rotation -55.4055099 -59.644989 -49.4193726
+scale 0.021765301 0.021765301 0.021765301
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 24.4449158 4.33338547 24.9862595
+rotation -133.401337 105.300293 -96.7678986
+scale 0.0396679975 0.0396679975 0.0396679975
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 11.5367622 13.9585571 -21.9090252
+rotation -93.3702698 19.740387 -161.273712
+scale 0.0170308165 0.0170308165 0.0170308165
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 9.35380173 12.0035782 -24.3378754
+rotation 49.8202515 -119.249298 -66.980423
+scale 0.0176009983 0.0176009983 0.0176009983
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -20.3759556 12.1555519 -9.39366245
+rotation 99.4285278 9.02098083 -114.959267
+scale 0.029799467 0.029799467 0.029799467
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 13.539463 -8.98490715 -20.8851452
+rotation 74.0826111 28.21315 66.7767029
+scale 0.0435981154 0.0435981154 0.0435981154
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 11.0774727 -19.8481255 21.7146721
+rotation 40.2850647 87.4143677 72.5232849
+scale 0.0416480228 0.0416480228 0.0416480228
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -4.33181 1.38992119 -15.8591003
+rotation -53.2767639 16.6291656 -1.9775238
+scale 0.0449201874 0.0449201874 0.0449201874
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 8.36095428 -0.828807831 11.7756844
+rotation -9.29200745 23.8347931 -51.3952179
+scale 0.0316709578 0.0316709578 0.0316709578
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 9.34399414 1.11177635 19.4952164
+rotation -163.367767 -31.6155701 61.8581085
+scale 0.0402488336 0.0402488336 0.0402488336
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 23.9413338 3.4580574 18.9448357
+rotation -116.500595 -58.4420319 30.5371704
+scale 0.027589066 0.027589066 0.027589066
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 22.4059715 -13.5318642 -10.0258436
+rotation -78.3355865 -91.4895706 -15.5510559
+scale 0.0132891806 0.0132891806 0.0132891806
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 1.81651688 -6.75789833 20.305851
+rotation 92.2142029 -86.710434 -178.24086
+scale 0.0343695059 0.0343695059 0.0343695059
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 4.92661285 -16.8205528 -6.9717083
+rotation -154.304199 -25.3587799 156.578766
+scale 0.0439399257 0.0439399257 0.0439399257
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -9.48937798 -9.72483444 8.84341812
+rotation -56.9610214 -83.3057022 -76.3270874
+scale 0.0437413566 0.0437413566 0.0437413566
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -3.96857834 -15.4267006 -15.8526955
+rotation 168.276764 -152.95314 111.788177
+scale 0.0367228687 0.0367228687 0.0367228687
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 7.60158539 -17.2047157 -9.76426315
+rotation -65.5467911 -99.1893158 151.935669
+scale 0.027496824 0.027496824 0.027496824
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 13.7068939 4.12905884 -11.374876
+rotation 79.8213501 153.939484 111.128387
+scale 0.0152991964 0.0152991964 0.0152991964
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 1.41443253 -13.9903736 24.8345566
+rotation -0.790283203 77.3880615 -98.7279282
+scale 0.0207022317 0.0207022317 0.0207022317
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -13.0429983 14.3555222 12.5034294
+rotation 78.4869995 88.1903381 -77.8042068
+scale 0.0133791715 0.0133791715 0.0133791715
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 22.7813988 17.492012 -10.215414
+rotation -14.1686249 -133.548813 87.7224731
+scale 0.0338194929 0.0338194929 0.0338194929
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 4.17199135 -0.115392685 13.8154144
+rotation -167.198929 107.776642 119.398285
+scale 0.0372258015 0.0372258015 0.0372258015
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -19.1858177 -12.0359182 16.579628
+rotation 95.8179626 -159.971252 1.82791138
+scale 0.0226983931 0.0226983931 0.0226983931
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 17.3557549 -16.6908169 13.9119034
+rotation -62.1032257 108.643677 70.5892792
+scale 0.0133781647 0.0133781647 0.0133781647
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -8.20724297 18.4550896 -6.90732956
+rotation -69.3616028 -62.2966003 169.720001
+scale 0.032203991 0.032203991 0.032203991
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -15.2769146 4.31651878 -24.4437065
+rotation 14.1215363 140.240723 119.902832
+scale 0.0407578871 0.0407578871 0.0407578871
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -2.17944908 -1.93467903 -17.6282692
+rotation -84.5289383 -139.929291 19.8102112
+scale 0.0259628277 0.0259628277 0.0259628277
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -12.4264355 9.82967377 3.11236763
+rotation -41.0042419 159.004639 -20.1373596
+scale 0.031693954 0.031693954 0.031693954
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -15.8046093 -15.0871611 -12.252492
+rotation 149.709717 -44.4284363 -152.718079
+scale 0.02164522 0.02164522 0.02164522
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 22.8926964 4.15139771 -12.979701
+rotation -82.6899109 -18.5881195 -22.3809509
+scale 0.0238321107 0.0238321107 0.0238321107
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -20.2046852 -13.1301069 24.0694199
+rotation -166.445236 -170.930618 -79.7802505
+scale 0.0157215428 0.0157215428 0.0157215428
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -21.3748093 18.7143669 16.2058983
+rotation 154.380219 2.009552 48.2902527
+scale 0.0334201865 0.0334201865 0.0334201865
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -7.12632751 3.72581673 -5.00438881
+rotation -29.3755035 -31.7612457 -100.139267
+scale 0.0167662986 0.0167662986 0.0167662986
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position 12.1917343 -5.60946274 -9.78009415
+rotation -120.551689 -174.842819 -38.9189148
+scale 0.0277492981 0.0277492981 0.0277492981
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -10.3126707 -5.6132431 7.36981964
+rotation 78.1490784 -114.928215 -121.637299
+scale 0.0140308086 0.0140308086 0.0140308086
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1
+
+object "models/teapot/teapot.obj"
+import assimp 1 0
+position -13.4463902 -5.81943703 -11.8230524
+rotation 105.532318 -84.2627106 112.465485
+scale 0.0193090737 0.0193090737 0.0193090737
+color 1 0.0500000007 0.0500000007
+texture "models/teapot/default.png"
+flags 1 1 1 1
+tint 1 1

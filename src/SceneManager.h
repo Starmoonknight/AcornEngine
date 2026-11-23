@@ -79,6 +79,8 @@ namespace AcornData
         Assets::ModelSource source;
         Transform transform; 
         ModelRenderSettings appearance;
+        
+        std::string textureFilePath;
     };
 
     // Description of a level before it is instantiated.

@@ -1,4 +1,5 @@
 // Project headers
+#include "assets/SceneFile.h"
 #include "rendering/Camera.h"
 #include "rendering/OpenGLErrors.h"
 #include "rendering/Renderer.h"
@@ -18,6 +19,7 @@
 #include <filesystem>
 #include <iostream>     // std::cout and std::cerr for diagnostics
 #include <initializer_list>
+#include <unordered_map>
 #include <optional>
 #include <vector>       // Mesh data and temporary OBJ attribute lists
 
@@ -303,11 +305,27 @@ int main(int argc, char **argv) {
             std::cerr << "[Warning] Failed to load texture: models/pine/LushPine.png\n";
         }
         
+        GLuint cobblestoneTexture = Texture::LoadTexture2D("textures/cobblestone_floor_07_diff_4k.jpg");
+        if (cobblestoneTexture == 0)
+        {
+            std::cerr << "[Warning] Failed to load texture: textures/cobblestone_floor_07_diff_4k.jpg\n";
+        }
         
-        //std::string playerBody = "models/cube/cube.obj";
-        //std::string playerBody = "models/suzanne/suzanne.obj";
-        std::string playerBody = "models/plane/plane.obj";
         
+        
+        std::string playerFirstBody = "models/cube/cube.obj";
+        std::string playerBody = "models/suzanne/suzanne.obj";
+        std::string playerOtherBody = "models/lpshead/head.obj";
+        
+        
+        // for saving textures path to a scene 
+        const std::unordered_map<std::string, GLuint> sceneTextures{
+            {"models/cube/default.png", cubeTexture},
+            {"models/pine/LushPine.png", pineTexture},
+            {"models/teapot/default.png", teapotTexture},
+            {"models/backpack/diffuse.jpg", backpackTexture},
+            {"textures/cobblestone_floor_07_diff_4k.jpg", cobblestoneTexture}
+        };
         
         
         stbi_set_flip_vertically_on_load(false);
@@ -318,30 +336,12 @@ int main(int argc, char **argv) {
             std::filesystem::current_path()
         };
         
-        
-        /*
-        
-        
-        // --- testing new import pipeline --- 
-        Demo::PopulateComparison_Backpack(activeScene, backpackTexture);
-        //Demo::PopulateComparison_Teapot(activeScene, teapotTexture);
-        //Demo::PopulateComparison_Ipshead(activeScene, ipsheadTexture);
-        //Demo::PopulateComparison_Cube(activeScene, cubeTexture);
-        Demo::PopulateComparison_Pine(activeScene, pineTexture);
-        //Demo::PopulateComparison_SportsCar(activeScene, 0);
-        
-        */
-        
+                
         
         
         // ---- Scene Settings ---- 
         
-        // Later test some active scenes with different populations, keypresses to switch scene 
-        
-        
         Scene& scene = activeScene;
-        //scene.sceneID = 0;
-        //scene.settings.splitScreen = AcornData::SplitScreenSettings::HorizontalSplit;
         
         // face culling    
         Rendering::RenderSettings renderSettings {};
@@ -354,9 +354,48 @@ int main(int argc, char **argv) {
         
         
         
-        // current scene data coming from demo instead of file loading 
-        // later replace with reading in using filepath like the textures and adding to a vector / array 
-        const auto sceneDescriptions = Demo::MakeDemoScenes();
+        
+        
+        /* // TEMPORARY EXPORT: run once, then remove this block.
+        // Temporary code to make scenes and save thema s files
+        const std::array<std::filesystem::path, 6> scenePaths{
+            "scenes/basic_01.acorn",
+            "scenes/basic_02.acorn",
+            "scenes/basic_03.acorn",
+            "scenes/autumn_forest.acorn",
+            "scenes/teapot_space.acorn",
+            "scenes/basalt_gallery.acorn"
+        };
+        
+        const auto oldScenes = Demo::MakeDemoScenes();
+        
+        const std::array<AcornData::SceneDescription, 6> sceneDescriptions{
+            oldScenes[0], 
+            oldScenes[1], 
+            oldScenes[2], 
+            Demo::ForestScene::Build(),
+            Demo::TeapotScene::Build(), 
+            Demo::PillarScene::Build()
+        };
+        */ 
+        
+        
+        
+        
+        // current scene data file paths
+        const std::array<std::filesystem::path, 6> scenePaths{
+            "scenes/basic_01.acorn",
+            "scenes/basic_02.acorn",
+            "scenes/basic_03.acorn",
+            "scenes/autumn_forest.acorn",
+            "scenes/teapot_space.acorn",
+            "scenes/basalt_gallery.acorn"
+        };
+        
+        // Filled from saved files when a scene is selected.
+        // Keep the descriptions so F5 can write the loaded starting data.
+        std::array<AcornData::SceneDescription, 6> sceneDescriptions{};
+        
         
         
         // Lambda for scene switching showcase 
@@ -365,15 +404,42 @@ int main(int argc, char **argv) {
 
         auto switchScene = [&](std::size_t index) -> bool
         {
-            if (index >= sceneDescriptions.size())
+            if (index >= scenePaths.size())
                 return false;
 
+            // Parse first. A malformed/missing file must not clear the
+            // currently active runtime scene.
+            std::string parseError;
+
+            if (!SceneFile::Read(
+                    scenePaths[index],
+                    sceneDescriptions[index],
+                    parseError))
+            {
+                std::cerr << "[Scene] " << parseError << '\n';
+                return false;
+            }
+
+            // Parsing succeeded: now replace the runtime scene.
             bool loaded = LoadSceneFromDescription(
                 activeScene, sceneDescriptions[index]);
 
             if (loaded)
-                loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerBody);
-
+            {
+                if (index <= 2)
+                {
+                    loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerFirstBody);
+                }
+                else if (index == 3)
+                {
+                    loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerOtherBody);
+                }
+                else
+                {
+                    loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerBody);
+                }
+            }
+            
             if (!loaded)
             {
                 activeScene.Clear();
@@ -387,14 +453,56 @@ int main(int argc, char **argv) {
             activeScene.cameras[1].enabled = multiplayerEnabled;
             activeScene.players[1].body.renderSettings.visible =
                 multiplayerEnabled;
+            
+            
+            
+            // Temporary demo texture assignment.
+            // The texture is owned by main and remains alive across scene switches.
+            const auto& descriptions = sceneDescriptions[index].objects;
+
+            // LoadSceneFromDescription adds placed objects in description order.
+            // Player bodies are separate and do not enter placedObjects.
+            for (std::size_t i = 0; i < descriptions.size(); ++i)
+            {
+                const std::string& path = descriptions[i].textureFilePath;
+                auto& instance = activeScene.placedObjects[i].instance;
+
+                instance.textureID = 0;
+
+                if (path.empty())
+                    continue; // Preserve textureExpected for deliberate error tests.
+
+                const auto found = sceneTextures.find(path);
+
+                if (found != sceneTextures.end())
+                {
+                    instance.textureID = found->second;
+                }
+                else
+                {
+                    std::cerr << "[Texture] No loaded texture for: " << path << '\n';
+                }
+            }            
+            
 
             glfwSetWindowTitle(window, activeScene.name.c_str());
             return true;
         };
         
         
+        
         // using the lambda to load start scene
-        switchScene(0);
+        // Paths such as "scenes/basic_01.acorn" are relative to this directory.
+        std::cout << "[Startup] Working directory: "
+                  << std::filesystem::current_path().string()
+                  << '\n';
+
+        if (!switchScene(0))
+        {
+            std::cerr
+                << "[Startup] Initial scene failed to load. "
+                << "Use keys 1-6 to retry or select another scene.\n";
+        }
         
         
         
@@ -428,7 +536,7 @@ int main(int argc, char **argv) {
         float sunAngleDegrees = 0.0f;
         
         
-        bool useBlackBackground = true;
+        bool useBlackBackground = false;
         
         
         
@@ -557,6 +665,40 @@ int main(int argc, char **argv) {
             
             
             
+            // --------- Temporary: Write current scene to file  --------- 
+            
+            if (actions.saveScene && scene.playersReady)
+            {
+                std::error_code directoryError;
+                std::filesystem::create_directories("scenes", directoryError);
+
+                if (directoryError)
+                {
+                    std::cerr << "[Save] " << directoryError.message() << '\n';
+                }
+                else
+                {
+                    std::string error;
+
+                    if (SceneFile::Write(
+                            scenePaths[currentSceneIndex],
+                            sceneDescriptions[currentSceneIndex],
+                            error))
+                    {
+                        std::cout << "[Save] "
+                                  << scenePaths[currentSceneIndex].string() << '\n';
+                    }
+                    else
+                    {
+                        std::cerr << "[Save] " << error << '\n';
+                    }
+                }
+            }
+            
+            
+            
+            
+            
             
             // --------- Apply presentation settings --------- 
             
@@ -579,7 +721,9 @@ int main(int argc, char **argv) {
             {
                 scene.cameras[0].backgroundColor = useBlackBackground
                     ? glm::vec3(0.0f)
-                    : glm::vec3(0.2f, 0.3f, 0.3f);
+                    : scene.settings.defaultBackgroundColor;
+                
+                    //: glm::vec3(0.2f, 0.3f, 0.3f);
             }
             
             
@@ -632,12 +776,12 @@ int main(int argc, char **argv) {
         // Texture cleanup 
         glDeleteTextures(1, &testTexture_crate);
         glDeleteTextures(1, &testTexture_face);
-
         glDeleteTextures(1, &backpackTexture);
         glDeleteTextures(1, &teapotTexture);
         glDeleteTextures(1, &ipsheadTexture);
         glDeleteTextures(1, &cubeTexture);
         glDeleteTextures(1, &pineTexture);
+        glDeleteTextures(1, &cobblestoneTexture);
         
        
         

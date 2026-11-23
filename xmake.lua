@@ -70,6 +70,10 @@ after_build(function (target)
     local modeldir = path.join(target:targetdir(), "models")
     os.mkdir(modeldir)
     os.cp(path.join(os.projectdir(), "models", "*"), modeldir)
+    
+    local scenedir = path.join(target:targetdir(), "scenes")
+    os.mkdir(scenedir)
+    os.cp(path.join(os.projectdir(), "scenes", "*.acorn"), scenedir)
 end)
 
 --

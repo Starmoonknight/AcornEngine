@@ -1,14 +1,18 @@
 ﻿#include "Demo.h"
 
 // Project headers
+#include "AcornMath.h"
 #include "rendering/Camera.h"
 #include "rendering/ShaderProgram.h"
 #include "SceneManager.h"
 
 // Standard library
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <initializer_list>
+#include <random>
 #include <vector>                               
 
 // Third-party libraries
@@ -36,6 +40,52 @@ namespace
         Palette::blue,    // Back
         Palette::yellow   // Top
     };
+    
+    
+    // Helper for turning scene struct into scene file, for models with textures 
+    AcornData::SceneObjectDescription MakeTexturedPlacement(
+        const std::string& modelPath,
+        const std::string& texturePath,
+        float baseScale,
+        bool flipUVs)
+    {
+        AcornData::SceneObjectDescription object;
+
+        object.source.filePath = modelPath;
+        object.source.importSettings.importer =
+            Assets::EModelImporter::Assimp;
+        object.source.importSettings.flipUVs = flipUVs;
+
+        object.textureFilePath = texturePath;
+        object.transform.scale = glm::vec3(baseScale);
+
+        object.appearance.overrideColor = true;
+        object.appearance.tintColor = glm::vec3(0.5f);
+        object.appearance.tintAlpha = 1.0f;
+        object.appearance.tintTextureAlpha = 0.0f;
+        object.appearance.textureExpected = true;
+        object.appearance.lightingRequested = true;
+
+        return object;
+    }
+    
+    // Helper for turning scene struct into scene file, for lit models that don't have a texture 
+    AcornData::SceneObjectDescription MakeSolidPlacement(
+    const std::string& modelPath,
+    float scale,
+    const glm::vec3& color)
+    {
+        auto object = MakeTexturedPlacement(
+            modelPath, "", scale, false);
+
+        object.appearance.textureExpected = false;
+        object.appearance.overrideColor = true;
+        object.appearance.tintColor = color;
+        object.appearance.tintAlpha = 1.0f;
+        object.appearance.tintTextureAlpha = 0.0f;
+
+        return object;
+    }
     
     
 }
@@ -484,6 +534,10 @@ namespace Demo
             player.body.textureID = textureID;
             player.body.transform.scale = glm::vec3(0.5f, 1.0f, 0.5f);
             player.body.renderSettings.textureExpected = textureID != 0;
+           
+            player.modelOrientationCorrection = glm::angleAxis(
+                glm::radians(180.0f), 
+                glm::vec3(0.0f, 1.0f, 0.0f));
             
             player.body.renderSettings.lightingRequested = true;
             
@@ -501,6 +555,7 @@ namespace Demo
                 player.body.renderSettings.tintAlpha = 1.0f;
                 player.body.renderSettings.tintTextureAlpha = 1.0f;
             }
+            
 
             player.SyncViewAndBody(view.camera);
 
@@ -561,6 +616,7 @@ namespace Demo
                     -static_cast<float>(i) * 3.0f);
 
                 object.appearance.overrideColor = true;
+                object.appearance.lightingRequested = true;
                 object.appearance.textureExpected = false;
 
                 const std::array<glm::vec3, 3> colors{
@@ -577,17 +633,23 @@ namespace Demo
             //A floor 
             AcornData::SceneObjectDescription floor;
             
-            floor.source.filePath = "models/cube/cube.obj";
+            floor.source.filePath = "models/plane/plane.obj";
             floor.source.importSettings.importer =
                 Assets::EModelImporter::Assimp;
             
             floor.transform.position = glm::vec3(0.0f, -10.0f, 0.0f);
-            floor.transform.scale = glm::vec3(10.0f, 0.0f, 10.0f);
+            floor.transform.scale = glm::vec3(30.0f, 1.0f, 30.0f);
 
             floor.appearance.overrideColor = true;
-            floor.appearance.textureExpected = false;
+            floor.appearance.tintAlpha = 1.0f;
+            floor.appearance.tintColor = Palette::grey; 
+            floor.appearance.lightingRequested = true;
             
+            floor.textureFilePath =
+                "textures/cobblestone_floor_07_diff_4k.jpg";
+            floor.appearance.textureExpected = true;
             
+            scene.objects.push_back(floor);
             
             
             // Visual marker for the logical goal location.
@@ -865,6 +927,434 @@ namespace Demo
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 
         loaded.AddObject(description, textureID);
+    }
+    
+    
+    
+    
+    
+    
+    
+    // --------------- Making Scenes --------------------
+    
+    
+    // The resulting forest has 64 placed objects: ground, 60 trees, two cars, and the goal marker.
+    AcornData::SceneDescription ForestScene::Build()
+    {
+        AcornData::SceneDescription scene;
+        scene.name = "Autumn Forest";
+        scene.sceneID = 0;
+        scene.settings.defaultBackgroundColor =
+            glm::vec3(0.45f, 0.55f, 0.65f);
+
+        constexpr float groundY = -10.0f;
+
+        // The actual plane spans -1..+1 in X/Z.
+        // Scale 60 gives a 120 x 120 ground, twice the old width/depth.
+        auto ground = MakeTexturedPlacement(
+            "models/plane/plane.obj",
+            "textures/cobblestone_floor_07_diff_4k.jpg",
+            1.0f,
+            false);
+
+        ground.transform.position = glm::vec3(0.0f, groundY, 0.0f);
+        ground.transform.scale = glm::vec3(60.0f, 1.0f, 60.0f);
+        scene.objects.push_back(ground);
+
+        // Begin near the +Z edge, facing -Z through the forest.
+        scene.playerStarts[0].position =
+            glm::vec3(-3.0f, groundY + 1.0f, 48.0f);
+        scene.playerStarts[1].position =
+            glm::vec3(3.0f, groundY + 1.0f, 48.0f);
+
+        // Closer to the center, while still beyond much of the forest.
+        scene.goalPosition = glm::vec3(0.0f, groundY + 1.0f, -25.0f);
+
+        const std::array<glm::vec3, 6> autumnColors{
+            glm::vec3(1.0f, 0.85f, 0.1f),
+            glm::vec3(1.0f, 0.55f, 0.1f),
+            glm::vec3(0.95f, 0.15f, 0.1f),
+            glm::vec3(0.8f, 0.1f, 0.25f),
+            glm::vec3(1.0f, 0.35f, 0.6f),
+            glm::vec3(1.0f, 0.65f, 0.75f)
+        };
+
+        // Fixed seed: repeated previews preserve the same layout.
+        std::mt19937 random(1042);
+        std::uniform_real_distribution<float> jitter(-3.0f, 3.0f);
+        std::uniform_real_distribution<float> sizeMultiplier(0.8f, 1.2f);
+        std::uniform_real_distribution<float> yaw(0.0f, 360.0f);
+
+        // Measured raw OBJ minimum Y is approximately 3.03.
+        // At scale 0.01, that is only about 0.03 world units.
+        constexpr float modelMinY = 3.03f;
+        constexpr float treeHeightAdjustment = 0.0f;
+
+            
+        // Placement of forrest 
+        for (int row = 0; row < 10; ++row)
+        {
+            for (int column = 0; column < 6; ++column)
+            {
+                const int treeIndex = row * 6 + column;
+
+                auto tree = MakeTexturedPlacement(
+                    "models/pine/scrubPine.obj",
+                    "models/pine/LushPine.png",
+                    0.01f,
+                    true);
+
+                const float scale = 0.01f * sizeMultiplier(random);
+                tree.transform.scale = glm::vec3(scale);
+                tree.transform.rotationDegrees.y = yaw(random);
+
+                tree.transform.position = glm::vec3(
+                    -40.0f + column * 16.0f + jitter(random),
+                    groundY - modelMinY * scale + treeHeightAdjustment,
+                    36.0f - row * 8.0f + jitter(random));
+
+                tree.appearance.tintColor =
+                    autumnColors[treeIndex % autumnColors.size()];
+                tree.appearance.tintTextureAlpha = 0.75f;
+
+                // One tree near the starting end intentionally lacks a texture.
+                if (treeIndex == 2)
+                    tree.textureFilePath.clear();
+
+                // Keep textureExpected true, including for that one tree.
+                scene.objects.push_back(tree);
+            }
+        }
+        
+        
+        // Placement of sports cars
+        std::uniform_real_distribution<float> carX(-35.0f, 35.0f);
+        std::uniform_real_distribution<float> carZ(-30.0f, 30.0f);
+
+        for (int i = 0; i < 2; ++i)
+        {
+            // Existing sports-car preset uses scale 1.
+            auto car = MakeSolidPlacement(
+                "models/sportsCar/sportsCar.obj",
+                1.0f,
+                glm::vec3(0.9f, 0.04f, 0.03f));
+
+            // This model's lowest vertices are approximately at local Y = 0.
+            car.transform.position =
+                glm::vec3(carX(random), groundY, carZ(random));
+
+            car.transform.rotationDegrees.y = yaw(random);
+
+            scene.objects.push_back(car);
+        }
+
+        AcornData::SceneObjectDescription goal;
+        goal.source.filePath = "models/cube/cube.obj";
+        goal.transform.position = scene.goalPosition;
+        goal.transform.scale = glm::vec3(0.3f);
+        goal.appearance.overrideColor = true;
+        goal.appearance.tintColor = glm::vec3(1.0f, 1.0f, 0.0f);
+        goal.appearance.lightingRequested = false;
+        scene.objects.push_back(goal);
+
+        return scene;
+    }
+        
+    
+    // Teapots: 80 placements throughout a volume 
+    AcornData::SceneDescription TeapotScene::Build()
+    {
+        AcornData::SceneDescription scene;
+        scene.name = "Find the Green Teapot";
+        scene.sceneID = 1;
+        scene.settings.defaultBackgroundColor =
+            glm::vec3(0.06f, 0.08f, 0.14f);
+        scene.settings.splitScreen =
+            AcornData::ESplitScreenSettings::HorizontalSplit;
+
+        // Start between two layers of teapots.
+        scene.playerStarts[0].position = glm::vec3(-2.0f, 0.0f, 0.0f);
+        scene.playerStarts[1].position = glm::vec3(2.0f, 0.0f, 0.0f);
+
+        std::mt19937 random(2057);
+
+        std::uniform_real_distribution<float> randomX(-25.0f, 25.0f);
+        std::uniform_real_distribution<float> randomY(-20.0f, 20.0f);
+        std::uniform_real_distribution<float> randomZ(-25.0f, 25.0f);
+
+        std::uniform_real_distribution<float> sizeMultiplier(0.5f, 1.8f);
+        std::uniform_real_distribution<float> angle(-180.0f, 180.0f);
+
+        constexpr int goalTeapotIndex = 17;
+
+        for (int i = 0; i < 80; ++i)
+        {
+            auto teapot = MakeTexturedPlacement(
+                "models/teapot/teapot.obj",
+                "models/teapot/default.png",
+                0.025f,
+                true);
+
+            glm::vec3 position;
+
+            // Keep a small clear region around the starting players.
+            // Elsewhere, overlapping teapots are allowed.
+            do
+            {
+                position = glm::vec3(
+                    randomX(random),
+                    randomY(random),
+                    randomZ(random));
+            }
+            while (glm::dot(position, position) < 8.0f * 8.0f);
+
+            teapot.transform.position = position;
+
+            teapot.transform.scale =
+                glm::vec3(0.025f * sizeMultiplier(random));
+
+            teapot.transform.rotationDegrees =
+                glm::vec3(angle(random), angle(random), angle(random));
+
+            teapot.appearance.tintColor =
+                i == goalTeapotIndex
+                ? glm::vec3(0.05f, 1.0f, 0.05f)
+                : glm::vec3(1.0f, 0.05f, 0.05f);
+
+            teapot.appearance.tintTextureAlpha = 1.0f;
+
+            if (i == goalTeapotIndex)
+            {
+                // The mesh extends upward from its origin.
+                // Put the logical goal near the transformed mesh center,
+                // rather than at the rotated teapot's base.
+                const glm::vec3 localCenter(5.2f, 39.5f, 0.0f);
+
+                scene.goalPosition =
+                    teapot.transform.position
+                    + AcornMath::MakeOrientationXYZ(
+                        teapot.transform.rotationDegrees)
+                    * (localCenter * teapot.transform.scale);
+            }
+
+            scene.objects.push_back(teapot);
+        }
+
+        return scene;
+    }
+
+    
+    
+    // This produces 55 placed objects: 36 pillars, 18 exhibits, and one yellow goal marker.
+    AcornData::SceneDescription PillarScene::Build()
+    {
+        AcornData::SceneDescription scene;
+        scene.name = "Basalt Gallery";
+        scene.sceneID = 2;
+        scene.settings.defaultBackgroundColor =
+            glm::vec3(0.35f, 0.42f, 0.5f);
+
+        constexpr int columns = 6;
+        constexpr int rows = 6;
+        constexpr int pillarCount = columns * rows;
+
+        // Testing cube scale 2, multiplied by 5.
+        constexpr float pillarWidth = 10.0f;
+
+        // Common base; varying heights determine the top surface.
+        constexpr float bottomY = -18.0f;
+
+        std::mt19937 random(3081);
+        std::uniform_real_distribution<float> heightVariation(6.0f, 9.0f);
+        std::uniform_real_distribution<float> yaw(0.0f, 360.0f);
+
+        auto pillarCenter = [](int index)
+        {
+            const int column = index % columns;
+            const int row = index / columns;
+
+            return glm::vec3(
+                -25.0f + column * pillarWidth,
+                0.0f,
+                25.0f - row * pillarWidth);
+        };
+
+        // Reserve two starting pillars and one goal pillar.
+        constexpr int player1Pillar = 0;
+        constexpr int player2Pillar = 1;
+        constexpr int goalPillar = pillarCount - 1;
+
+        std::vector<int> availablePillars;
+
+        for (int i = 0; i < pillarCount; ++i)
+        {
+            if (i != player1Pillar &&
+                i != player2Pillar &&
+                i != goalPillar)
+            {
+                availablePillars.push_back(i);
+            }
+        }
+
+        std::shuffle(
+            availablePillars.begin(), availablePillars.end(), random);
+
+        // Each exhibit gets its own raised pillar.
+        std::array<bool, pillarCount> hasExhibit{};
+
+        for (int i = 0; i < 18; ++i)
+            hasExhibit[availablePillars[i]] = true;
+
+        std::array<float, pillarCount> topHeights{};
+
+        for (int i = 0; i < pillarCount; ++i)
+        {
+            const int row = i / columns;
+
+            const float height =
+                heightVariation(random) + (hasExhibit[i] ? 2.5f : 0.0f);
+
+            topHeights[i] = bottomY + height;
+
+            // Row 0 is closest to +Z; last row is closest to -Z.
+            const float brightness =
+                0.15f + 0.60f * static_cast<float>(row) / (rows - 1);
+
+            auto pillar = MakeSolidPlacement(
+                "models/cube/cube.obj",
+                1.0f,
+                glm::vec3(brightness));
+
+            pillar.transform.scale =
+                glm::vec3(pillarWidth, height, pillarWidth);
+
+            pillar.transform.position = pillarCenter(i);
+
+            // Cube geometry is centered at its origin.
+            // Half the height below this position reaches bottomY.
+            pillar.transform.position.y = bottomY + height * 0.5f;
+
+            scene.objects.push_back(pillar);
+        }
+
+        struct ExhibitPreset
+        {
+            const char* model;
+            const char* texture;
+            float scale;
+            float localMinY;
+            bool flipUVs;
+        };
+
+        // Existing test scales. Minimum Y values measured from the OBJ files,
+        // rounded slightly: suitable starting points for visual adjustment.
+        const std::array<ExhibitPreset, 6> presets{
+            ExhibitPreset{
+                "models/backpack/backpack.obj",
+                "models/backpack/diffuse.jpg",
+                1.0f, -1.74f, true
+            },
+            ExhibitPreset{
+                "models/teapot/teapot.obj",
+                "models/teapot/default.png",
+                0.025f, 0.0f, true
+            },
+            ExhibitPreset{
+                "models/lpshead/head.OBJ",
+                "models/lpshead/rendered.jpg",
+                10.0f, -0.31f, true
+            },
+            ExhibitPreset{
+                "models/pine/scrubPine.obj",
+                "models/pine/LushPine.png",
+                0.01f, 3.03f, true
+            },
+            ExhibitPreset{
+                "models/sportsCar/sportsCar.obj",
+                "",
+                1.0f, 0.0f, false
+            },
+            ExhibitPreset{
+                "models/suzanne/suzanne.obj",
+                "",
+                1.0f, -0.98f, false
+            }
+        };
+
+        const std::array<glm::vec3, 7> rainbow{
+            glm::vec3(1.0f, 0.05f, 0.05f),
+            glm::vec3(1.0f, 0.45f, 0.05f),
+            glm::vec3(1.0f, 0.9f, 0.05f),
+            glm::vec3(0.1f, 0.85f, 0.2f),
+            glm::vec3(0.1f, 0.4f, 1.0f),
+            glm::vec3(0.4f, 0.15f, 0.85f),
+            glm::vec3(0.9f, 0.15f, 0.8f)
+        };
+
+        std::array<int, 7> rainbowOrder{0, 1, 2, 3, 4, 5, 6};
+        std::shuffle(rainbowOrder.begin(), rainbowOrder.end(), random);
+
+        int exhibitIndex = 0;
+
+        for (std::size_t type = 0; type < presets.size(); ++type)
+        {
+            const auto& preset = presets[type];
+
+            for (int copy = 0; copy < 3; ++copy)
+            {
+                const int support = availablePillars[exhibitIndex++];
+
+                auto object = MakeTexturedPlacement(
+                    preset.model,
+                    preset.texture,
+                    preset.scale,
+                    preset.flipUVs);
+
+                object.appearance.textureExpected =
+                    !object.textureFilePath.empty();
+
+                // Yaw does not change minimum Y, keeping grounding simple.
+                object.transform.rotationDegrees.y = yaw(random);
+
+                object.transform.position = pillarCenter(support);
+                object.transform.position.y =
+                    topHeights[support]
+                    - preset.localMinY * preset.scale;
+
+                if (type == 4) // Sports car
+                {
+                    object.appearance.tintColor =
+                        glm::vec3(0.9f, 0.04f, 0.03f);
+                }
+                else if (type == 5) // Suzanne
+                {
+                    object.appearance.tintColor =
+                        rainbow[rainbowOrder[copy]];
+                }
+
+                scene.objects.push_back(object);
+            }
+        }
+
+        scene.playerStarts[0].position = pillarCenter(player1Pillar);
+        scene.playerStarts[0].position.y = topHeights[player1Pillar] + 1.0f;
+
+        scene.playerStarts[1].position = pillarCenter(player2Pillar);
+        scene.playerStarts[1].position.y = topHeights[player2Pillar] + 1.0f;
+
+        scene.goalPosition = pillarCenter(goalPillar);
+        scene.goalPosition.y = topHeights[goalPillar] + 1.0f;
+
+        auto goal = MakeSolidPlacement(
+            "models/cube/cube.obj",
+            0.3f,
+            glm::vec3(1.0f, 1.0f, 0.0f));
+
+        goal.transform.position = scene.goalPosition;
+        goal.appearance.lightingRequested = false;
+        scene.objects.push_back(goal);
+
+        return scene;
     }
     
     

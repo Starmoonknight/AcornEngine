@@ -1,0 +1,49 @@
+
+ACORN ENGINE CONTROLS
+
+PLAYER 1
+W / S          Move forward / backward
+A / D          Strafe left / right
+E / Q          Move locally up / down
+F / H          Look left / right
+T / G          Look up / down
+
+PLAYER 2
+I / K          Move forward / backward
+J / L          Strafe left / right
+O / U          Move locally up / down
+Left / Right   Look left / right
+Up / Down      Look up / down
+
+SCENES
+1              Load Basic Scene 1
+2              Load Basic Scene 2
+3              Load Basic Scene 3
+4              Load Autumn Forest
+5              Load Teapot Space
+6              Load Basalt Gallery
+
+Loading a scene resets both players to its starting poses.
+Reach the goal to advance to the next scene.
+The final scene wraps back to the first.
+The green teapot is the goal in Teapot Space.
+
+DISPLAY AND MULTIPLAYER
+M              Toggle player 2 and split-screen multiplayer
+0              Toggle the scrolling carousel effect
+B              Toggle player 1's background color
+Tab            Toggle wireframe
+Caps Lock      Toggle face culling
+Enter          Toggle player 1's perspective/orthographic view
+
+SAVE AND EXIT
+F5             Overwrite the selected scene file with its loaded description    Note: F5 is Disabled 
+Escape         Quit
+
+NOTES
+Movement follows the player's orientation.
+Players can turn upside down.
+Each player sees the other player's body, but not their own.
+Disabling multiplayer pauses and hides player 2.
+F5 does not save the players' current positions.
+Saved files use the application's working-directory scenes folder.
