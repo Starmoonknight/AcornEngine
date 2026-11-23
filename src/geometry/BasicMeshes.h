@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CpuMeshData.h"
+#include "assets/CpuMeshData.h"
 
 
 // NOTE WARNING: This is obsolete and should be removed or needs a way to work with the current make models pipeline 

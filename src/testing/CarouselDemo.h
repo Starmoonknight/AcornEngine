@@ -18,7 +18,7 @@ namespace Demo
     // Selecting one of these does not change the normal scene layout.
     // The application must explicitly call DrawCarouselScene instead of
     // DrawScene to use the experimental rendering path.
-    enum class SplitScreenSettings_Extra_Carousel
+    enum class ESplitScreenSettings_Extra_Carousel
     {
         // Useless, but fun to try to create: 
         
@@ -38,8 +38,8 @@ namespace Demo
     
     struct CarouselSettings
     {
-        SplitScreenSettings_Extra_Carousel layout =
-            SplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
+        ESplitScreenSettings_Extra_Carousel layout =
+            ESplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
 
         // Duration of one complete cycle.
         //

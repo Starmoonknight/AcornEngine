@@ -1,14 +1,14 @@
 // Project headers
-#include "AcornMath.h"
-#include "geometry/CpuMeshData.h"
 #include "rendering/Camera.h"
 #include "rendering/OpenGLErrors.h"
-#include "rendering/GpuModel.h"
 #include "rendering/Renderer.h"
 #include "rendering/ShaderProgram.h" 
 #include "SceneManager.h"
 #include "testing/CarouselDemo.h"
 #include "testing/Demo.h"
+#include "Utility/InputSystem.h"
+#include "Utility/InputContext.h"
+
 
 // Standard library
 #include <array>
@@ -37,8 +37,8 @@
 
 namespace
 {
-    constexpr int WindowWidth = 800;
-    constexpr int WindowHeight = 600;
+    constexpr int WindowWidth = 1200;
+    constexpr int WindowHeight = 1000;
     
     constexpr float nearPlane = 0.1f;
     constexpr float farPlane = 100.0f;
@@ -134,90 +134,6 @@ namespace
     }
     
     
-    void processInput_ESCAPE(GLFWwindow* window)
-    {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        {
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-        }
-    }
-    
-    struct RenderInputHistory
-    {
-        bool previousTab = false;
-        bool previousCaps = false;
-        bool previousEnter = false;
-    }; 
-    
-    void processInput_RenderSettings(GLFWwindow* window, RenderInputHistory& history, Rendering::RenderSettings& settings, Rendering::CameraData& camera)
-    {
-        const bool tab = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
-        if (tab && !history.previousTab)
-        {
-            settings.wireframe = !settings.wireframe;
-            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);        // Set drawing mode to wireframe
-            //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);        // Set drawing mode to filled, the default. 
-        }
-        history.previousTab = tab;
-        
-        const bool caps = glfwGetKey(window, GLFW_KEY_CAPS_LOCK) == GLFW_PRESS;
-        if (caps && !history.previousCaps)
-        {
-            settings.cullFaces = !settings.cullFaces;
-        }
-        history.previousCaps = caps;
-        
-        const bool enter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
-        if (enter && !history.previousEnter)
-        {
-            auto& type = camera.projectionSettings.projectionType;
-
-            type = type == Rendering::ProjectionType::PERSPECTIVE
-                ? Rendering::ProjectionType::ORTHOGRAPHIC
-                : Rendering::ProjectionType::PERSPECTIVE;
-        }
-        history.previousEnter = enter;
-        
-    }
-    
-    
-    
-    struct SceneSelectionInputHistory
-    {
-        std::array<bool, 3> previousDown{};
-    };
-
-    // Returns an array index only on a new key press.
-    // If several keys are newly pressed together, the lowest index wins.
-    std::optional<std::size_t> ReadSceneSelection(
-        GLFWwindow* window,
-        SceneSelectionInputHistory& history)
-    {
-        constexpr std::array<int, 3> keys{
-            GLFW_KEY_1,
-            GLFW_KEY_2,
-            GLFW_KEY_3
-        };
-
-        std::optional<std::size_t> requested;
-
-        for (std::size_t i = 0; i < keys.size(); ++i)
-        {
-            const bool down =
-                glfwGetKey(window, keys[i]) == GLFW_PRESS;
-
-            if (down && !history.previousDown[i] &&
-                !requested.has_value())
-            {
-                requested = i;
-            }
-
-            // Update every key, even after choosing a request.
-            history.previousDown[i] = down;
-        }
-
-        return requested;
-    }
     
 }
 
@@ -280,12 +196,7 @@ struct FrameClock
 
 
 int main(int argc, char **argv) {
-    
-    using AcornData::Transform;
-    using AcornData::Vertex;
-    using AcornData::CpuMeshData;
-    using AcornData::RenderModelInstance; 
-    
+      
     
     // Temp program time measurement 
     const auto startupStart = std::chrono::steady_clock::now();
@@ -309,6 +220,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     
+    
     // ---- Setup Shader Program ---- 
     
     ShaderProgram shaderProgram("shaders/basic.vert", "shaders/basic.frag");
@@ -326,10 +238,17 @@ int main(int argc, char **argv) {
     
     
     
-    
+    // Shader initialization has succeeded above this point.
     // Keeping GPU-owning demo objects inside this scope.
     // Their destructors must run while the OpenGL context still exists.
     { 
+        
+        
+        // ---- Setup Input ---- 
+    
+        // Destroyed when this scope ends, before glfwDestroyWindow().
+        Input::InputSystem input(window);
+    
         
         
         // ---- Loading Assets  ---- 
@@ -385,6 +304,12 @@ int main(int argc, char **argv) {
         }
         
         
+        //std::string playerBody = "models/cube/cube.obj";
+        //std::string playerBody = "models/suzanne/suzanne.obj";
+        std::string playerBody = "models/plane/plane.obj";
+        
+        
+        
         stbi_set_flip_vertically_on_load(false);
         
         
@@ -422,71 +347,54 @@ int main(int argc, char **argv) {
         Rendering::RenderSettings renderSettings {};
         Rendering::ApplyRenderSettings(renderSettings); 
         
-        RenderInputHistory renderSettingInputHistory = {};    
         
         // enable depth view 
         glEnable(GL_DEPTH_TEST);
         
         
         
-        /*
         
-        // ---- Camera ---- 
-        
-        scene.cameras.resize(2);
-        
-        // Resizing or appending the vector can screw up saved references, if that were to 
-        // happen the saved sceneCamera and secondCamera would need to be set again before use
-        SceneCamera& sceneCamera = scene.cameras[0];
-        SceneCamera& secondCamera = scene.cameras[1];
-        //SceneCamera& thirdCamera = scene.cameras[2];
-        //SceneCamera& fourthCamera = scene.cameras[3];
-        
-        // camera 1
-        sceneCamera.camera.projectionSettings.projectionType = Rendering::ProjectionType::PERSPECTIVE; 
-        sceneCamera.camera.projectionSettings.verticalFovDegrees = 70.0f;
-        sceneCamera.camera.projectionSettings.orthographicHeight = 10.0f;
-        sceneCamera.camera.projectionSettings.nearPlane = 0.1f;
-        sceneCamera.camera.projectionSettings.farPlane = 100.0f;
-        
-        // camera 2,  set up with camera 1 
-        secondCamera.camera.projectionSettings = sceneCamera.camera.projectionSettings;
-        
-        secondCamera.target = sceneCamera.target;
-        secondCamera.startingOffset = sceneCamera.startingOffset;
-        secondCamera.orbitAngleDegrees = 180.0f;
-        secondCamera.backgroundColor = scene.settings.defaultBackgroundColor;
-        
-        // camera 3
-        //thirdCamera.backgroundColor = Palette::pink;
-        
-        // camera 4 
-        
-        
-        // update each camera transform to match starting values 
-        for (SceneCamera& camera : scene.cameras)
-        {
-            Demo::SetCameraOrbitPose(
-                camera.camera,
-                camera.target,
-                camera.orbitAngleDegrees,
-                camera.startingOffset);
-        }
-        
-        
-        */
-        
-        
-        const float cameraSpeed = 10.0f;
-        
-        
-        
+        // current scene data coming from demo instead of file loading 
+        // later replace with reading in using filepath like the textures and adding to a vector / array 
         const auto sceneDescriptions = Demo::MakeDemoScenes();
+        
+        
+        // Lambda for scene switching showcase 
+        std::size_t currentSceneIndex = 0;
+        bool multiplayerEnabled = true;
 
-        if (!LoadSceneFromDescription(activeScene, sceneDescriptions[0]))
+        auto switchScene = [&](std::size_t index) -> bool
         {
-            std::cerr << "[Scene] Failed to load initial scene\n";
-        }
+            if (index >= sceneDescriptions.size())
+                return false;
+
+            bool loaded = LoadSceneFromDescription(
+                activeScene, sceneDescriptions[index]);
+
+            if (loaded)
+                loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerBody);
+
+            if (!loaded)
+            {
+                activeScene.Clear();
+                std::cerr << "[Scene] Failed to load scene " << index << '\n';
+                return false;
+            }
+
+            currentSceneIndex = index;
+
+            // when multiplayer is disabled, deactivate the second player parts 
+            activeScene.cameras[1].enabled = multiplayerEnabled;
+            activeScene.players[1].body.renderSettings.visible =
+                multiplayerEnabled;
+
+            glfwSetWindowTitle(window, activeScene.name.c_str());
+            return true;
+        };
+        
+        
+        // using the lambda to load start scene
+        switchScene(0);
         
         
         
@@ -511,9 +419,6 @@ int main(int argc, char **argv) {
         FramebufferSize framebuffer{};
         
         
-        SceneSelectionInputHistory sceneSelectionHistory;
-        
-        
         // change this to toggle between scenes 
         //int selectedTest = static_cast<int>(Demo::TestSceneObjects::Backpacks);     // what models to show
         
@@ -524,20 +429,22 @@ int main(int argc, char **argv) {
         
         
         bool useBlackBackground = true;
-        bool previousZeroDown = false;
         
         
+        
+        
+        
+        // ----- Testing Zone ----- 
         
         //  Testing weird camera layouts 
-        const bool useCarouselExperiment = false;
+        bool useCarouselExperiment = false;
 
         Demo::CarouselSettings carousel;
 
         carousel.layout =
-            Demo::SplitScreenSettings_Extra_Carousel::CarouselHorizontalSplit;
+            Demo::ESplitScreenSettings_Extra_Carousel::CarouselHorizontalSplit;
 
         carousel.secondsPerLoop = 8.0f;
-        
         
         
         
@@ -555,8 +462,50 @@ int main(int argc, char **argv) {
         // render loop
         while(!glfwWindowShouldClose(window))
         {
-            glfwPollEvents();
-            processInput_ESCAPE(window);
+            
+            
+            // --------- Collect Inputs --------- 
+            
+            input.Update();
+            const Demo::FrameInput actions = Demo::ReadFrameInput(input);
+
+            
+            // --------- Apply Inputs --------- 
+            
+            if (actions.quit)
+            {
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
+
+            if (actions.toggleWireframe)
+            {
+                renderSettings.wireframe = !renderSettings.wireframe;
+            }
+
+            if (actions.toggleCulling)
+            {
+                renderSettings.cullFaces = !renderSettings.cullFaces;
+            }
+
+            if (actions.toggleBackground)
+            {
+                useBlackBackground = !useBlackBackground;                
+            }
+            
+            if (actions.toggleMultiplayer)
+            {
+                multiplayerEnabled = !multiplayerEnabled;
+            }
+            
+            if (actions.toggleCarousel)
+            {
+                useCarouselExperiment = !useCarouselExperiment;
+
+                // Start each activation from the normal, unshifted arrangement.
+                if (useCarouselExperiment)
+                    carousel.phase = 0.0f;
+            }
+            
             
             // get time and deltaTime 
             clock.Tick(glfwGetTime());
@@ -564,73 +513,74 @@ int main(int argc, char **argv) {
             
             
             
-            const auto requestedScene =
-            ReadSceneSelection(window, sceneSelectionHistory);
             
-            if (requestedScene.has_value())
+            // --------- Handle manual scene change request --------- 
+            
+            // to avoid some behavior right after a scene switch             
+            bool switchedThisFrame = false;
+            
+            if (actions.requestedScene.has_value())
             {
-                const std::size_t index = *requestedScene;
+                switchScene(*actions.requestedScene);
 
-                if (index < sceneDescriptions.size())
-                {
-                    
-                    const bool loaded = LoadSceneFromDescription(
-                        activeScene,
-                        sceneDescriptions[index]);
-
-                    if (loaded)
-                    {
-                        glfwSetWindowTitle(window, activeScene.name.c_str()); 
-                        
-                        std::cout
-                            << "[Scene] Loaded "
-                            << activeScene.name << '\n';
-                    }
-                    else
-                    {
-                        std::cerr
-                            << "[Scene] Failed to load "
-                            << sceneDescriptions[index].name << '\n';
-                    }
-
-                    // Synchronous loading must not become a movement timestep.
-                    clock.Reset(glfwGetTime());
-                    deltaTime = 0.0f;
-                }
+                clock.Reset(glfwGetTime());
+                deltaTime = 0.0f;
+                switchedThisFrame = true;
             }
+            
+            
+            // --------- Update scene logic --------- 
+            
+            // update scene logic 
+            const SceneUpdateResult updateResult = scene.UpdateScene( 
+                deltaTime,
+                actions.players,
+                multiplayerEnabled, 
+                switchedThisFrame);
 
+            
+            
+            // --------- Check for and handle Goal reached  --------- 
+            
+            if (updateResult.goalReached)
+            {
+                // Round-robin load scenes when goal is reached
+                const std::size_t next =
+                    (currentSceneIndex + 1) % sceneDescriptions.size();
+
+                switchScene(next);
+
+                clock.Reset(glfwGetTime());
+                deltaTime = 0.0f;
+                switchedThisFrame = true;
+            }
+            
+            
+            
+            
+            // --------- Apply presentation settings --------- 
             
             // Acquire camera access only after any scene replacement.
             // Failed loading deliberately leaves an empty scene.
+            if (actions.toggleProjection && !scene.cameras.empty())
+            {
+                auto& projection =
+                    scene.cameras[0].camera.projectionSettings.projectionType;
+
+                projection =
+                    projection == Rendering::EProjectionType::PERSPECTIVE
+                    ? Rendering::EProjectionType::ORTHOGRAPHIC
+                    : Rendering::EProjectionType::PERSPECTIVE;
+            }
+            
+
+            // background color for  camera 1
             if (!scene.cameras.empty())
             {
-                processInput_RenderSettings(
-                    window,
-                    renderSettingInputHistory,
-                    renderSettings,
-                    scene.cameras[0].camera);
-                
-                
-                
-                // switch between bright and dark background with key press 0 
-                const bool zeroDown = glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS;
-                
-                if (zeroDown && !previousZeroDown)
-                {
-                    useBlackBackground = !useBlackBackground;
-                }
-                
-                previousZeroDown = zeroDown;
-                
-                // background color for  camera 1
                 scene.cameras[0].backgroundColor = useBlackBackground
                     ? glm::vec3(0.0f)
                     : glm::vec3(0.2f, 0.3f, 0.3f);
-                
             }
-
-            
-            scene.UpdateScene(deltaTime);
             
             
             glfwGetFramebufferSize(
@@ -654,27 +604,12 @@ int main(int argc, char **argv) {
             }
             
             
-            
-            /* Orbiting camera code 
-            for (SceneCamera& camera : scene.cameras)
-            {
-                if (camera.enabled)
-                {
-                    Demo::UpdateOrbitingCamera(camera, deltaTime);
-                    
-                    //Demo::UpdateCameraPos(window, camera, cameraSpeed, deltaTime);
-                }
-            }
-            */
-            
-            
-            //const glm::vec3 spinningSunDirection = Demo::SpinTheSun(deltaTime, sunAngleDegrees);
-            //glUniform3fv(lightDirectionLocation, 1, glm::value_ptr(spinningSunDirection));
-            
-            
-            
             Rendering::ApplyRenderSettings(renderSettings);
 
+            
+            
+            // --------- Draw using normal or carousel rendering --------- 
+            
             // change so one scene uses this later 
             if (useCarouselExperiment)
             {
@@ -689,8 +624,10 @@ int main(int argc, char **argv) {
                 scene.DrawScene(shaderProgram);
             }
             
+            
             glfwSwapBuffers(window);
         }
+        
         
         // Texture cleanup 
         glDeleteTextures(1, &testTexture_crate);

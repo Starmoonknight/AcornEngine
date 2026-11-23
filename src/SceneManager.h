@@ -6,6 +6,7 @@
 #include "assets/ModelCache.h"
 #include "rendering/Camera.h"
 #include "rendering/RenderInstances.h"
+#include "testing/Player.h"
 #include "Palette.h"
 
 // Standard library
@@ -48,7 +49,7 @@ namespace AcornData
         glm::vec3 rotationDegrees{0.0f};
     };
 
-    enum class SplitScreenSettings
+    enum class ESplitScreenSettings
     {
         VerticalSplit,              // Vertical dividing lines: views arranged left to right.
         HorizontalSplit,            // Horizontal dividing lines: views arranged bottom to top.
@@ -62,7 +63,7 @@ namespace AcornData
         
         Sun sun{}; 
         
-        SplitScreenSettings splitScreen = SplitScreenSettings::VerticalSplit;
+        ESplitScreenSettings splitScreen = ESplitScreenSettings::VerticalSplit;
     };
 
     
@@ -101,6 +102,15 @@ namespace AcornData
 
 
 
+// temp for the player showcase 
+struct SceneUpdateResult
+{
+    // The caller decides what level to load.
+    // UpdateScene itself never clears or replaces the scene.
+    bool goalReached = false;
+};
+
+
 struct FramebufferSize
 {
     int width = 0;
@@ -124,6 +134,11 @@ struct SceneCamera
     glm::vec3 target{0.0f};
     glm::vec3 startingOffset{4.0f, 5.0f, 7.0f};
     float orbitAngleDegrees = 0.0f;
+    
+    
+    // temp-player code to skip rendering the player this camera is attached to 
+    // Borrowed pointer. Skip this instance only when drawing this view.
+    const AcornData::RenderModelInstance* hiddenInstance = nullptr;
 };
 
 
@@ -165,6 +180,18 @@ struct Scene
     //      Might make a pointer instead later?  
     */
     Assets::ModelCache modelCache;
+    
+    
+    // Fixed storage: body addresses remain stable while the Scene exists.
+    std::array<Player, 2> players{};
+    bool playersReady = false;
+    
+    // Allows one completion report after players enter the goal.
+    // Starts false after loading. Becomes true when all active players
+    // are outside the goal, then becomes false when entry is reported.
+    // Spawning inside the goal therefore does not immediately finish it.
+    bool goalArmed = false;
+    
     
     // Owns static/placed objects and their render instances.
     // Appending preserves existing object addresses.
@@ -261,9 +288,18 @@ struct Scene
     void ConfigureSceneViewports(const FramebufferSize& framebuffer);
     
     
-    // Reserved for scene/gameplay updates; currently does nothing.
-    // Does not read input or update camera/player poses yet.
-    void UpdateScene(float deltaTime);
+    // Note: temp for player showcase 
+    // Applies player actions and checks goal completion.
+    // Does not poll devices, draw, or load another scene.
+    //
+    // multiplayerEnabled is application state, so it survives scene changes.
+    // skipGameplay preserves freshly loaded poses and skips goal detection
+    // on a frame in which the caller has already replaced the scene.
+    SceneUpdateResult UpdateScene(
+        float deltaTime,
+        const std::array<Input::PlayerInput, 2>& playerInputs,
+        bool multiplayerEnabled,
+        bool skipGameplay);
     
     
     // Clears the framebuffer and draws registered instances through each

@@ -249,7 +249,7 @@ namespace Rendering
         
         switch (settings.projectionType)
         {
-            case ProjectionType::PERSPECTIVE:
+            case EProjectionType::PERSPECTIVE:
             {
                 assert(std::isfinite(settings.verticalFovDegrees));
                 assert(settings.verticalFovDegrees > 0.0f && settings.verticalFovDegrees < 180.0f);
@@ -259,7 +259,7 @@ namespace Rendering
                     settings.nearPlane, settings.farPlane);                    
             }            
             
-            case ProjectionType::ORTHOGRAPHIC:
+            case EProjectionType::ORTHOGRAPHIC:
             {
                 assert(std::isfinite(settings.orthographicHeight) && settings.orthographicHeight > 0.0f);
                 const float halfHeight = settings.orthographicHeight * 0.5f;

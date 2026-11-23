@@ -452,11 +452,66 @@ namespace Demo
        }
    }
     
-    
-    
-    
-    
-    
+
+    bool CreatePlayers(Scene& scene, GLuint textureID, const std::string& filePath)
+    {
+        if (scene.cameras.size() != scene.players.size())
+            return false;
+
+        Assets::ModelSource source;
+        source.filePath = filePath; 
+        source.importSettings.importer = Assets::EModelImporter::Assimp;
+
+        const auto* geometry = scene.modelCache.GetOrLoad(source);
+
+        if (geometry == nullptr)
+            return false;
+
+        for (std::size_t i = 0; i < scene.players.size(); ++i)
+        {
+            Player& player = scene.players[i];
+            SceneCamera& view = scene.cameras[i];
+
+            player.cameraIndex = i;
+            player.position = scene.playerStarts[i].position;
+
+            view.camera.SetRotationDegrees(
+                scene.playerStarts[i].rotationDegrees);
+
+            player.orientation = view.camera.orientation;
+
+            player.body.gpuModel = geometry;
+            player.body.textureID = textureID;
+            player.body.transform.scale = glm::vec3(0.5f, 1.0f, 0.5f);
+            player.body.renderSettings.textureExpected = textureID != 0;
+            
+            player.body.renderSettings.lightingRequested = true;
+            
+            if (i == 0)
+            {
+                player.body.renderSettings.overrideColor = true;
+                player.body.renderSettings.tintColor = Palette::orange;
+                player.body.renderSettings.tintAlpha = 1.0f;
+                player.body.renderSettings.tintTextureAlpha = 1.0f;
+            }
+            else if (i == 1)
+            {
+                player.body.renderSettings.overrideColor = true;
+                player.body.renderSettings.tintColor = Palette::blue;
+                player.body.renderSettings.tintAlpha = 1.0f;
+                player.body.renderSettings.tintTextureAlpha = 1.0f;
+            }
+
+            player.SyncViewAndBody(view.camera);
+
+            scene.RegisterRenderInstance(&player.body);
+            view.hiddenInstance = &player.body;
+        }
+
+        scene.playersReady = true;
+        return true;
+    }
+
 
     std::array<AcornData::SceneDescription, 3> MakeDemoScenes()
     {
@@ -472,12 +527,12 @@ namespace Demo
             if (i == 2)
             {
                 scene.settings.splitScreen =
-                    AcornData::SplitScreenSettings::HorizontalSplit;
+                    AcornData::ESplitScreenSettings::HorizontalSplit;
             }
             else
             {
                 scene.settings.splitScreen =
-                    AcornData::SplitScreenSettings::VerticalSplit;
+                    AcornData::ESplitScreenSettings::VerticalSplit;
             }
 
             const float startHeight = 1.0f + static_cast<float>(i);
@@ -489,7 +544,7 @@ namespace Demo
                 glm::vec3(2.0f, startHeight, 8.0f);
 
             // Both use zero rotation and therefore face world -Z.
-            scene.goalPosition = glm::vec3(0.0f, 0.0f, -5.0f);
+            scene.goalPosition = glm::vec3(5.0f, 0.0f, -5.0f);
 
             for (int objectIndex = 0; objectIndex < 3; ++objectIndex)
             {
@@ -498,7 +553,7 @@ namespace Demo
                 
                 object.source.filePath = "models/cube/cube.obj";
                 object.source.importSettings.importer =
-                    Assets::ModelImporter::Assimp;
+                    Assets::EModelImporter::Assimp;
 
                 object.transform.position = glm::vec3(
                     static_cast<float>(objectIndex - 1) * 3.0f,
@@ -518,6 +573,41 @@ namespace Demo
 
                 scene.objects.push_back(object);
             }
+            
+            //A floor 
+            AcornData::SceneObjectDescription floor;
+            
+            floor.source.filePath = "models/cube/cube.obj";
+            floor.source.importSettings.importer =
+                Assets::EModelImporter::Assimp;
+            
+            floor.transform.position = glm::vec3(0.0f, -10.0f, 0.0f);
+            floor.transform.scale = glm::vec3(10.0f, 0.0f, 10.0f);
+
+            floor.appearance.overrideColor = true;
+            floor.appearance.textureExpected = false;
+            
+            
+            
+            
+            // Visual marker for the logical goal location.
+            // Its mesh is only a marker; completion uses the distance check in main.
+            AcornData::SceneObjectDescription goalMarker;
+
+            goalMarker.source.filePath = "models/cube/cube.obj";
+            goalMarker.source.importSettings.importer =
+                Assets::EModelImporter::Assimp;
+
+            goalMarker.transform.position = scene.goalPosition;
+            goalMarker.transform.scale = glm::vec3(0.3f);
+
+            goalMarker.appearance.overrideColor = true;
+            goalMarker.appearance.tintColor = glm::vec3(1.0f, 1.0f, 0.0f);
+            goalMarker.appearance.tintAlpha = 1.0f;
+            goalMarker.appearance.textureExpected = false;
+            goalMarker.appearance.lightingRequested = false;
+
+            scene.objects.push_back(goalMarker);
         }
 
         return scenes;
@@ -587,7 +677,7 @@ namespace Demo
         
         // Left object: Assimp interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::Assimp;
+            Assets::EModelImporter::Assimp;
 
         description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 
@@ -596,7 +686,7 @@ namespace Demo
         
         // Right object: custom OBJ interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::CustomObj;
+            Assets::EModelImporter::CustomObj;
         description.source.importSettings.skipInvalidFaces = false;
 
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
@@ -622,7 +712,7 @@ namespace Demo
         
         // Left object: Assimp interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::Assimp;
+            Assets::EModelImporter::Assimp;
 
         description.transform.position = glm::vec3(-3.0f, 0.0f, 0.0f);
 
@@ -631,7 +721,7 @@ namespace Demo
         
         // Right object: custom OBJ interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::CustomObj;
+            Assets::EModelImporter::CustomObj;
         description.source.importSettings.skipInvalidFaces = false;
 
         description.transform.position = glm::vec3(3.0f, 0.0f, 0.0f);
@@ -657,7 +747,7 @@ namespace Demo
         
         // Left object: Assimp interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::Assimp;
+            Assets::EModelImporter::Assimp;
         
         description.transform.position = glm::vec3(-2.0f, 2.0f, 0.0f);
 
@@ -666,7 +756,7 @@ namespace Demo
         
         // Right object: custom OBJ interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::CustomObj;
+            Assets::EModelImporter::CustomObj;
         description.source.importSettings.skipInvalidFaces = false;
 
         description.transform.position = glm::vec3(2.0f, 2.0f, 0.0f);
@@ -692,7 +782,7 @@ namespace Demo
         
         // Left object: Assimp interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::Assimp;
+            Assets::EModelImporter::Assimp;
         
         description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 
@@ -701,7 +791,7 @@ namespace Demo
         
         // Right object: custom OBJ interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::CustomObj;
+            Assets::EModelImporter::CustomObj;
         description.source.importSettings.skipInvalidFaces = false;
 
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
@@ -727,7 +817,7 @@ namespace Demo
         
         // Left object: Assimp interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::Assimp;
+            Assets::EModelImporter::Assimp;
         
        description.transform.position = glm::vec3(-3.0f, -2.0f, 0.5f);
 
@@ -736,7 +826,7 @@ namespace Demo
         
         // Right object: custom OBJ interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::CustomObj;
+            Assets::EModelImporter::CustomObj;
         description.source.importSettings.skipInvalidFaces = false;
 
         description.transform.position = glm::vec3(3.0f, -2.0f, 0.5f);
@@ -760,7 +850,7 @@ namespace Demo
 
         // Left object: Assimp interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::Assimp;
+            Assets::EModelImporter::Assimp;
         
         description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 
@@ -769,7 +859,7 @@ namespace Demo
         
         // Right object: custom OBJ interpretation.
         description.source.importSettings.importer =
-            Assets::ModelImporter::CustomObj;
+            Assets::EModelImporter::CustomObj;
         description.source.importSettings.skipInvalidFaces = false;
 
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);

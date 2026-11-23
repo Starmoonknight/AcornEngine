@@ -21,11 +21,11 @@ namespace AcornData
         
         // for tinting the whole mesh
         bool overrideColor = false;
-        float colorTintAmount = 1.0f; 
+        float tintAlpha = 1.0f; 
         glm::vec3 tintColor{1.0f};
         
         bool textureExpected = false;
-        float tintTextureAmount = 0.0f;
+        float tintTextureAlpha = 0.0f;
         
         bool lightingRequested = false; 
     };

@@ -15,7 +15,7 @@
 namespace Assets
 {
     
-    enum class ModelImporter
+    enum class EModelImporter
     {
         CustomObj,
         Assimp
@@ -24,7 +24,7 @@ namespace Assets
     
     struct ModelImportSettings
     {
-        ModelImporter importer = ModelImporter::Assimp;
+        EModelImporter importer = EModelImporter::Assimp;
         bool flipUVs = false;
         
         // Only used by the custom OBJ importer.

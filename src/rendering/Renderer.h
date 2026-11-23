@@ -25,7 +25,7 @@ namespace AcornData
     
     
     // unused for now
-    enum class TextureType
+    enum class ETextureType
     {
         Diffuse,
         Specular,
@@ -34,7 +34,7 @@ namespace AcornData
     // unused for now
     struct Texture {
         GLuint id = 0;
-        TextureType type;   // type e.g. a diffuse or specular texture. 
+        ETextureType type;   // type e.g. a diffuse or specular texture. 
     };      
     
 }

@@ -196,10 +196,10 @@ namespace Rendering
                     : settings.tintColor;
 
             const float colorAmount =
-                showTextureError ? 1.0f : settings.colorTintAmount;
+                showTextureError ? 1.0f : settings.tintAlpha;
 
             const float textureTintAmount =
-                showTextureError ? 0.0f : settings.tintTextureAmount;
+                showTextureError ? 0.0f : settings.tintTextureAlpha;
             
             
             

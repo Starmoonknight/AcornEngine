@@ -30,7 +30,7 @@ namespace Rendering
     
     // is this best to have on camera or arm? 
     // Currently not in use
-    enum class CamereaMovementMode
+    enum class ECamereaMovementMode
     {
         FreeFlight,
         FirstPerson_Follow,
@@ -39,7 +39,7 @@ namespace Rendering
     };
     
     
-    enum class ProjectionType
+    enum class EProjectionType
     {
         PERSPECTIVE,
         ORTHOGRAPHIC,
@@ -57,7 +57,7 @@ namespace Rendering
     
     struct ProjectionSettings
     {
-        ProjectionType projectionType = ProjectionType::PERSPECTIVE;
+        EProjectionType projectionType = EProjectionType::PERSPECTIVE;
         
         float verticalFovDegrees = 70.0f;
         float orthographicHeight = 10.0f;

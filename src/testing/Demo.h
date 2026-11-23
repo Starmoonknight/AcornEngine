@@ -152,6 +152,10 @@ namespace Demo
     
     
     
+    bool CreatePlayers(Scene& scene, GLuint textureID, const std::string& filePath);
+    
+    
+    
     std::array<AcornData::SceneDescription, 3> MakeDemoScenes(); 
     
     
@@ -237,12 +241,12 @@ namespace Demo
 
             // Keep the two importer results separate for comparison.
             source.importSettings.importer =
-                Assets::ModelImporter::Assimp;
+                Assets::EModelImporter::Assimp;
 
             backpackGpu_assimp = cache.GetOrLoad(source, verboseLogs);
 
             source.importSettings.importer =
-                Assets::ModelImporter::CustomObj;
+                Assets::EModelImporter::CustomObj;
             source.importSettings.skipInvalidFaces = false;
 
             backpackGpu_mine = cache.GetOrLoad(source, verboseLogs);
@@ -306,12 +310,12 @@ namespace Demo
 
             // Keep the two importer results separate for comparison.
             source.importSettings.importer =
-                Assets::ModelImporter::Assimp;
+                Assets::EModelImporter::Assimp;
 
             teapotGpu_assimp = cache.GetOrLoad(source, verboseLogs);
 
             source.importSettings.importer =
-                Assets::ModelImporter::CustomObj;
+                Assets::EModelImporter::CustomObj;
             source.importSettings.skipInvalidFaces = false;
 
             teapotGpu_mine = cache.GetOrLoad(source, verboseLogs);
@@ -378,12 +382,12 @@ namespace Demo
 
             // Keep the two importer results separate for comparison.
             source.importSettings.importer =
-                Assets::ModelImporter::Assimp;
+                Assets::EModelImporter::Assimp;
 
             lpsheadGpu_assimp = cache.GetOrLoad(source, verboseLogs);
 
             source.importSettings.importer =
-                Assets::ModelImporter::CustomObj;
+                Assets::EModelImporter::CustomObj;
             source.importSettings.skipInvalidFaces = true;
 
             lpsheadGpu_mine = cache.GetOrLoad(source, verboseLogs);
@@ -449,12 +453,12 @@ namespace Demo
 
             // Keep the two importer results separate for comparison.
             source.importSettings.importer =
-                Assets::ModelImporter::Assimp;
+                Assets::EModelImporter::Assimp;
 
             cubeGpu_assimp = cache.GetOrLoad(source, verboseLogs);
 
             source.importSettings.importer =
-                Assets::ModelImporter::CustomObj;
+                Assets::EModelImporter::CustomObj;
             source.importSettings.skipInvalidFaces = false;
 
             cubeGpu_mine = cache.GetOrLoad(source, verboseLogs);
@@ -520,12 +524,12 @@ namespace Demo
 
             // Keep the two importer results separate for comparison.
             source.importSettings.importer =
-                Assets::ModelImporter::Assimp;
+                Assets::EModelImporter::Assimp;
 
             pineGpu_assimp = cache.GetOrLoad(source, verboseLogs);
 
             source.importSettings.importer =
-                Assets::ModelImporter::CustomObj;
+                Assets::EModelImporter::CustomObj;
             source.importSettings.skipInvalidFaces = false;
 
             pineGpu_mine = cache.GetOrLoad(source, verboseLogs);
@@ -591,12 +595,12 @@ namespace Demo
 
             // Keep the two importer results separate for comparison.
             source.importSettings.importer =
-                Assets::ModelImporter::Assimp;
+                Assets::EModelImporter::Assimp;
 
             sportCarGpu_assimp = cache.GetOrLoad(source, verboseLogs);
 
             source.importSettings.importer =
-                Assets::ModelImporter::CustomObj;
+                Assets::EModelImporter::CustomObj;
             source.importSettings.skipInvalidFaces = true;
 
             sportCarGpu_mine = cache.GetOrLoad(source, verboseLogs);

@@ -3,6 +3,7 @@
 
 // Project headers
 #include "rendering/Renderer.h"
+#include "Utility/InputContext.h"
 
 // Standard library
 #include <algorithm>
@@ -165,6 +166,11 @@ void Scene::Clear()
     // Remove borrowed addresses before destroying their targets.
     renderInstances.clear();
     
+    // temp-player cleanup 
+    players = {};
+    playersReady = false;
+    goalArmed = false;
+    
     // Destroy runtime contents before releasing geometry they borrow.
     cameras.clear();
     placedObjects.clear();
@@ -229,17 +235,17 @@ void Scene::ConfigureSceneViewports(const FramebufferSize& framebuffer)
     
     switch (settings.splitScreen)
     {
-    case AcornData::SplitScreenSettings::VerticalSplit:
+    case AcornData::ESplitScreenSettings::VerticalSplit:
         ConfigureStripViewports(
             *this, framebuffer, enabledCount, true);
         break;
 
-    case AcornData::SplitScreenSettings::HorizontalSplit:
+    case AcornData::ESplitScreenSettings::HorizontalSplit:
         ConfigureStripViewports(
             *this, framebuffer, enabledCount, false);
         break;
 
-    case AcornData::SplitScreenSettings::GridSplit:
+    case AcornData::ESplitScreenSettings::GridSplit:
         ConfigureGridViewports(
             *this, framebuffer, enabledCount);
         break;
@@ -249,14 +255,71 @@ void Scene::ConfigureSceneViewports(const FramebufferSize& framebuffer)
 
 
 
-void Scene::UpdateScene(float deltaTime)
+
+SceneUpdateResult Scene::UpdateScene(
+        float deltaTime,
+        const std::array<Input::PlayerInput, 2>& playerInputs,
+        bool multiplayerEnabled,
+        bool skipGameplay)
 {
-    
-    
-    
-    
-    
+    SceneUpdateResult result;
+
+    // Successful CreatePlayers establishes two players and two cameras.
+    // Failed loading leaves playersReady false.
+    if (!playersReady)
+        return result;
+
+    // Apply participation even when movement is skipped this frame.
+    cameras[1].enabled = multiplayerEnabled;
+    players[1].body.renderSettings.visible = multiplayerEnabled;
+
+    if (skipGameplay)
+        return result;
+
+    const std::size_t activePlayerCount =
+        multiplayerEnabled ? 2 : 1;
+
+    for (std::size_t i = 0; i < activePlayerCount; ++i)
+    {
+        players[i].Update(
+            playerInputs[i],
+            cameras[i].camera,
+            deltaTime);
+    }
+
+    constexpr float goalRadius = 1.5f;
+    constexpr float goalRadiusSquared = goalRadius * goalRadius;
+
+    bool anyPlayerInside = false;
+
+    for (std::size_t i = 0; i < activePlayerCount; ++i)
+    {
+        const glm::vec3 offset = players[i].position - goalPosition;
+
+        if (glm::dot(offset, offset) <= goalRadiusSquared)
+        {
+            anyPlayerInside = true;
+            break;
+        }
+    }
+
+    if (!anyPlayerInside)
+    {
+        // All active players are outside: a later entry may finish.
+        goalArmed = true;
+    }
+    else if (goalArmed)
+    {
+        result.goalReached = true;
+
+        // Report once per entry, even if the caller does not immediately
+        // replace the scene. Leaving the goal allows another entry.
+        goalArmed = false;
+    }
+
+    return result;    
 }
+
 
 
 
@@ -309,7 +372,8 @@ void Scene::DrawScene(const ShaderProgram& shader)
         
         for (const AcornData::RenderModelInstance* model : renderInstances)
         {
-            if (model != nullptr)
+            // sceneCamera.hiddenInstance is temp-player code, to hide player from its own camera 
+            if (model != nullptr && model != sceneCamera.hiddenInstance)
             {
                 Rendering::DrawModel(shader, cameraMatrices, *model);
             }

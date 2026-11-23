@@ -34,8 +34,8 @@ namespace Assets
         ModelImportSettings settings = source.importSettings;
         
         // Reject an importer value this implementation does not support.
-        if (settings.importer != ModelImporter::Assimp &&
-            settings.importer != ModelImporter::CustomObj)
+        if (settings.importer != EModelImporter::Assimp &&
+            settings.importer != EModelImporter::CustomObj)
         {
             std::cerr << "[ModelCache] Invalid importer\n";
             return nullptr;
@@ -43,7 +43,7 @@ namespace Assets
         
         // Assimp does not use the custom loader's skip policy.
         // Ignore any irrelevant settings when comparing requests.
-        if (settings.importer == ModelImporter::Assimp)
+        if (settings.importer == EModelImporter::Assimp)
         {
             settings.skipInvalidFaces = false;
         }
@@ -130,7 +130,7 @@ namespace Assets
         std::vector<AcornData::CpuMeshData> meshes;
         
         // Load the model using the correct importer, with correct settings for that importer type 
-        if (settings.importer == ModelImporter::Assimp)
+        if (settings.importer == EModelImporter::Assimp)
         {
             meshes = OBJ_Loader_Assimp::LoadMesh_Assimp(
                 pathText.c_str(),

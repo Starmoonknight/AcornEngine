@@ -1,7 +1,7 @@
 #pragma once
 
 // Project headers
-#include "geometry/CpuMeshData.h"
+#include "assets/CpuMeshData.h"
 
 // Standard library
 #include <vector>                       // Mesh data and temporary OBJ attribute lists

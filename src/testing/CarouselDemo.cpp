@@ -293,7 +293,8 @@ namespace
         // need two visible copies, but the world still updates only once.
         for (const AcornData::RenderModelInstance* model : scene.renderInstances)
         {
-            if (model != nullptr)
+            // sceneCamera.hiddenInstance is temp-player code, to hide player from its own camera 
+            if (model != nullptr && model != sceneCamera.hiddenInstance)
                 Rendering::DrawModel(shader, matrices, *model);
         }
     }
@@ -352,7 +353,7 @@ namespace Demo
         // Grid mode changes assignments between stationary grid positions.
         // It does not need the offscreen copies used by strip scrolling.
         if (settings.layout ==
-            SplitScreenSettings_Extra_Carousel::CarouselGridSplit)
+            ESplitScreenSettings_Extra_Carousel::CarouselGridSplit)
         {
             
             // Temporary preview: owns camera copies and an empty model cache.
@@ -362,7 +363,7 @@ namespace Demo
             preview.cameras = scene.cameras;
             preview.settings = scene.settings;
             preview.renderInstances = scene.renderInstances;
-            preview.settings.splitScreen = AcornData::SplitScreenSettings::GridSplit;
+            preview.settings.splitScreen = AcornData::ESplitScreenSettings::GridSplit;
 
             // Rebuild the original grid every frame, then apply the shift
             // derived from phase. This avoids accumulating permutations.
@@ -380,7 +381,7 @@ namespace Demo
         //   false -> stacked strips traveling down
         const bool moveSideways =
             settings.layout ==
-            SplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
+            ESplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
 
         // Temporary preview: owns camera copies and an empty model cache.
         // Render registrations borrow the original scene's live instances.
@@ -391,7 +392,7 @@ namespace Demo
         preview.renderInstances = scene.renderInstances;
 
         preview.settings.splitScreen =
-            moveSideways ? AcornData::SplitScreenSettings::VerticalSplit : AcornData::SplitScreenSettings::HorizontalSplit;
+            moveSideways ? AcornData::ESplitScreenSettings::VerticalSplit : AcornData::ESplitScreenSettings::HorizontalSplit;
 
         // Reuse the normal strip layout to obtain sizes and starting
         // positions. Enabled cameras divide the available area.
