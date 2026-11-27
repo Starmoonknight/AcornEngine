@@ -32,6 +32,7 @@ add_requires("glad v0.1.36", {configs = {
     generator = "c",
     loader = true,
 }})
+add_requires("flecs")
 
 
 
@@ -53,6 +54,7 @@ target("Acorn")
     add_packages("glm")
     add_packages("glad") 
     add_packages("assimp") 
+    add_packages("flecs")
     -- Other files to display in Rider
     add_extrafiles("shaders/**.vert", "shaders/**.frag")
     add_extrafiles("textures/**.jpg", "textures/**.png")

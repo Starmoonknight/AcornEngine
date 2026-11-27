@@ -2,6 +2,7 @@
 
 
 // Project headers 
+#include "assets/AssetRecords.h"
 #include "Camera.h"
 #include "GpuModel.h"
 #include "OpenGLErrors.h"
@@ -15,51 +16,7 @@
 
 // Third-party libraries
 #include <glm/gtc/type_ptr.hpp>             // glm::value_ptr for OpenGL uniforms
-#include "stb_image.h"
 
-
-
-
-namespace Texture
-{
-    
-    GLuint LoadTexture2D(const char* filePath)
-    {
-        int width = 0;
-        int height = 0;
-        int channelsInFile = 0;
-        
-        // Return four bytes per pixel (RGBA), regardless of the file's channels.  Should work with both .jpg and .png 
-        unsigned char *pixels = stbi_load(filePath, &width, &height, &channelsInFile, STBI_rgb_alpha);  
-        
-        if (!pixels)
-        {
-            std::cerr << "Failed to load texture: " << filePath << '\n';
-            return 0;
-        }
-        
-        GLuint textureID = 0;
-        glGenTextures(1, &textureID);  
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        
-        // set the texture wrapping/filtering options (on the currently bound texture object)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        
-        // load and generate the texture
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        
-        // releases the CPU-side pixel array returned by stbi_load() after glTexImage2D() has consumed the pixels for the OpenGL texture
-        stbi_image_free(pixels);
-
-        return textureID;
-    }
-    
-    
-}
 
 
 
@@ -143,73 +100,146 @@ namespace Rendering
     }
     
     
-    void DrawModel(const ShaderProgram& shader, const CameraMatrices& viewMatrices, const AcornData::RenderModelInstance& model)
+    void DrawModel(
+        flecs::world& world,
+        const ShaderProgram& shader, 
+        const CameraMatrices& viewMatrices, 
+        const AcornData::ModelInstance& model)
     {
+        using namespace AcornData;
         
-        if (!model.renderSettings.visible || model.gpuModel == nullptr)
+        if (!model.renderSettings.visible)
         {
             return;
         }
+        
+        const auto* asset = 
+            Assets::Find<ModelAsset>(world, model.asset.value);
 
-        const glm::mat4 modelMatrix = AcornMath::BuildModelMatrix(model.transform);
+        if (asset == nullptr || asset->geometry == nullptr)
+            return;
         
-        const auto& settings = model.renderSettings;
         
+        std::vector<glm::mat4> nodeMatrices;
+        asset->BuildNodeMatrices(
+            model.transform,
+            model.nodeOverrides,
+            nodeMatrices);
+        
+        
+        // Fallback drawing defaults when the selected material cannot be resolved.
+        // This local value is not registered in Flecs and has no asset identity.
+        // Its defaults produce an untextured white surface.
+        const Material fallback{};
         
         shader.use();
+        // Tell this shader's sampler to read texture unit index 0.
         glUniform1i(shader.GetBasicUniformLocations().textureLocation, 0);
-        
+        // Select which unit subsequent glBindTexture calls modify.
+        // Selecting this unit does not disable other units.
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, model.textureID); 
         
-        for (const auto& mesh : model.gpuModel->meshes)
+        for (std::size_t nodeIndex = 0; nodeIndex < asset->nodes.size(); ++nodeIndex)
         {
-            const bool missingTexture =
-                 settings.textureExpected && model.textureID == 0;
-
-            const bool missingUVs =
-                settings.textureExpected && !mesh.hasUVs;
-
-            const bool showTextureError =
-                missingTexture || missingUVs;
+            const ModelNode& node = asset->nodes[nodeIndex]; 
             
-            
-            const bool useTexture =
-                !showTextureError &&
-                mesh.hasUVs &&
-                model.textureID != 0;
+            for (const ModelPart& part : node.parts)
+            {
+                const GpuMesh& mesh = 
+                    asset->geometry->meshes[part.meshIndex]; 
+                
+                // Instance whole-material override
+                MaterialId selected = model.wholeMaterialOverride;
+                // Zero in the checks below means "no replacement", so try the next assignment level.
+                // A nonzero but invalid reference falls back to the emergency material;
+                // it does not silently reveal a lower-priority assignment.
+                
+                //      otherwise asset whole-material override
+                if (selected.value == 0)
+                {
+                    selected = asset->wholeMaterialOverride;
+                }
+                
+                //      otherwise part’s material-slot assignment
+                if (selected.value == 0)
+                {
+                    selected =
+                       asset->materialSlots[part.materialSlotIndex].material;
+                }
+                
+                const Material* found =
+                Assets::Find<Material>(world, selected.value);
+                //      otherwise fallback material
+                const Material& material = found ? *found : fallback;
 
-            // Also disable lighting if texture error so the diagnostic remains bright.
-            const bool useLighting =
-                !showTextureError &&
-                settings.lightingRequested &&
-                mesh.hasNormals;
+                const AcornData::Texture* texture = 
+                    Assets::Find<AcornData::Texture>(world, material.diffuseTexture.value);
 
-            
-            // If textures are missing but were expected show error color
-            const bool overrideColor =
-                showTextureError || settings.overrideColor;
+                // Bind this part's texture object to the GL_TEXTURE_2D binding on unit 0.
+                // The shader's sampler reads this binding when DrawMesh executes.
+                //  Note:   Current material can only have one texture so always using 
+                //          this slot until more texture options are supported. 
+                const GLuint textureObject = texture ? texture->objectId : 0;
+                
+                const bool expectsTexture =
+                    material.textureExpected ||
+                    material.diffuseTexture.value != 0;
 
-            const glm::vec3 color =
-                showTextureError
+                const bool textureError =
+                    expectsTexture &&
+                    (textureObject == 0 || !mesh.hasUVs);
+
+                const bool useTexture =
+                    !textureError &&
+                    textureObject != 0 &&
+                    mesh.hasUVs;
+                
+                
+                // Contribution of vertex color:
+                // 0 = material color only; 1 = vertex color only.
+                // Without a color buffer, force material color instead of depending
+                // on the value of a disabled vertex attribute.
+                const float vertexWeight =
+                    mesh.colorVBO != 0
+                    ? material.vertexColorWeight
+                    : 0.0f;
+                
+                const glm::vec3 color =
+                    textureError
                     ? glm::vec3(1.0f, 0.0f, 1.0f)
-                    : settings.tintColor;
+                    : material.baseColor;
 
-            const float colorAmount =
-                showTextureError ? 1.0f : settings.tintAlpha;
+                // The existing shader uses mix(VertexColor, ObjectColor, amount).
+                // Its amount therefore measures MATERIAL contribution, the opposite
+                // of vertexWeight. A texture error forces the full diagnostic color.
+                const float materialWeight = 
+                    textureError ? 1.0f : 1.0f - vertexWeight;
+                
+                
+                // Also disable lighting if texture error so the diagnostic remains bright.
+                const bool useLighting = 
+                    !textureError &&
+                    model.renderSettings.lightingRequested &&
+                    mesh.hasNormals;
+                    
 
-            const float textureTintAmount =
-                showTextureError ? 0.0f : settings.tintTextureAlpha;
-            
-            
-            
-            SetBasicShaderUniforms(
-                shader, modelMatrix, viewMatrices.view, viewMatrices.projection,
-                overrideColor, color, colorAmount, useTexture, textureTintAmount
-            );
-            
-            shader.SetBool("uUseLighting", useLighting);
-            DrawMesh(mesh);
+                glBindTexture(GL_TEXTURE_2D, textureObject);
+                
+                SetBasicShaderUniforms(
+                    shader,
+                    nodeMatrices[nodeIndex],
+                    viewMatrices.view,
+                    viewMatrices.projection,
+                    true,
+                    color,
+                    materialWeight,
+                    useTexture,
+                    textureError ? 0.0f : material.textureTintStrength);
+
+                shader.SetBool("uUseLighting", useLighting);
+                
+                DrawMesh(mesh);
+            }
         }
     }
     

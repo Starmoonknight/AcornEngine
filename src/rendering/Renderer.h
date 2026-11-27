@@ -8,7 +8,7 @@
 // Third-party libraries
 #include <glad/glad.h>                          // GLuint,  Keep glad include before GLFW include 
 #include <glm/glm.hpp>                          // Vectors, matrices, dot and cross products
-
+#include <flecs.h>
 
 class ShaderProgram;
 struct BasicUniformLocations;
@@ -19,33 +19,7 @@ namespace AcornData
 {
     
     struct GpuMesh;
-    struct RenderModelInstance;
-    
-    
-    
-    
-    // unused for now
-    enum class ETextureType
-    {
-        Diffuse,
-        Specular,
-        Normal,
-    };
-    // unused for now
-    struct Texture {
-        GLuint id = 0;
-        ETextureType type;   // type e.g. a diffuse or specular texture. 
-    };      
-    
-}
-
-
-
-
-namespace Texture
-{
-    
-    GLuint LoadTexture2D(const char* filePath);
+    struct ModelInstance;   
     
 }
 
@@ -98,10 +72,19 @@ namespace Rendering
     
     void DrawMesh(const AcornData::GpuMesh& mesh); 
     
-    
-    // Note: 
-    // Currently will have to re-calculate the model matrix for each camera instead of once and then applied to each camera draw
-    void DrawModel(const ShaderProgram& shader, const CameraMatrices& viewMatrices, const AcornData::RenderModelInstance& model);
+
+    // Draw one model instance through one camera.
+    // Resolves shared assets/materials/textures, evaluates node world matrices,
+    // and draws every node's parts using their effective material.
+    //    
+    // Does not advance animation or modify scene state.
+    // Note:  Currently recalculates matrices for each camera draw.
+    // Requires valid model structure and a current OpenGL context.
+    void DrawModel(
+        flecs::world& world,
+        const ShaderProgram& shader, 
+        const CameraMatrices& viewMatrices, 
+        const AcornData::ModelInstance& model);
     
     
     

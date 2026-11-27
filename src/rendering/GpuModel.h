@@ -14,7 +14,8 @@
 namespace AcornData
 {
     
-    // GPU handles and drawing metadata 	The VAO, buffers, and draw information for one uploaded mesh
+    // 	Owns uploaded geometry and draw information. 
+    // 	GPU handles and drawing metadata; The VAO, buffers, and draw information for one uploaded mesh
     //      one successful load and upload per path and settings combination. ? 
     struct GpuMesh
     {
@@ -67,7 +68,10 @@ namespace AcornData
         void TakeFrom(GpuMesh& other) noexcept;             
     };
     
-    // The collection of GpuMesh resources for one imported model
+    
+    
+    
+    // Owns the collection of uploaded mesh resources for one imported model
     struct GpuModel
     {
         std::vector<GpuMesh> meshes;

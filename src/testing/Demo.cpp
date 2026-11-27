@@ -23,25 +23,6 @@
 namespace 
 {
     
-    const std::vector<glm::vec3> pyramid_FaceColors{
-        Palette::pink,    // Bottom
-        Palette::yellow,  // Right
-        Palette::red,     // Front
-        Palette::green,   // Left
-        Palette::blue,    // Back
-    };
-        
-    // has to match EBO draw order
-    const std::vector<glm::vec3> cube_FaceColors{
-        Palette::red,     // Bottom
-        Palette::orange,  // Right
-        Palette::pink,    // Front
-        Palette::green,   // Left
-        Palette::blue,    // Back
-        Palette::yellow   // Top
-    };
-    
-    
     // Helper for turning scene struct into scene file, for models with textures 
     AcornData::SceneObjectDescription MakeTexturedPlacement(
         const std::string& modelPath,
@@ -379,8 +360,8 @@ namespace Demo
     
     
     void UpdateModelPair(GLFWwindow* window, GeometryRuntimeValues_Inputs& inputs,
-        GeometryRuntimeValues_Transforms& animation, AcornData::RenderModelInstance& left,
-        AcornData::RenderModelInstance& right, float deltaTime)
+        GeometryRuntimeValues_Transforms& animation, AcornData::ModelInstance& left,
+        AcornData::ModelInstance& right, float deltaTime)
     {
        const glm::vec3 previousTranslation = animation.translation;
        const glm::vec3 previousRotation = animation.rotationDegrees;
@@ -405,26 +386,6 @@ namespace Demo
            model->transform.scale *= scaleRatio;
        }
     }
-
-
-    void DrawAnimatedModel(
-    const ShaderProgram& shader,
-    const Rendering::CameraMatrices& viewMatrices,
-    const AcornData::RenderModelInstance& model)
-   {
-       Rendering::DrawModel(shader, viewMatrices, model);
-   }
-    
-
-    void DrawModelPair(
-        const ShaderProgram& shader,
-        const Rendering::CameraMatrices& viewMatrices,
-        const AcornData::RenderModelInstance& left,
-        const AcornData::RenderModelInstance& right)
-   {
-       DrawAnimatedModel(shader, viewMatrices, left);
-       DrawAnimatedModel(shader, viewMatrices, right);
-   }
 
     
     
@@ -503,7 +464,7 @@ namespace Demo
    }
     
 
-    bool CreatePlayers(Scene& scene, GLuint textureID, const std::string& filePath)
+    bool CreatePlayers(Scene& scene, AcornData::TextureId texture, const std::string& filePath)
     {
         if (scene.cameras.size() != scene.players.size())
             return false;
@@ -529,12 +490,18 @@ namespace Demo
                 scene.playerStarts[i].rotationDegrees);
 
             player.orientation = view.camera.orientation;
-
-            player.body.gpuModel = geometry;
-            player.body.textureID = textureID;
+            
             player.body.transform.scale = glm::vec3(0.5f, 1.0f, 0.5f);
-            player.body.renderSettings.textureExpected = textureID != 0;
+            player.body.renderSettings.textureExpected = texture.value != 0;
+            
+            // 1. Select the shared model asset.
+            player.body.asset = scene.flatModels.GetOrCreate(
+                scene.world,
+                *geometry,
+                source.filePath,
+                scene.fallbackMaterial);
            
+            // 2. Set transform and render settings.
             player.modelOrientationCorrection = glm::angleAxis(
                 glm::radians(180.0f), 
                 glm::vec3(0.0f, 1.0f, 0.0f));
@@ -555,6 +522,11 @@ namespace Demo
                 player.body.renderSettings.tintAlpha = 1.0f;
                 player.body.renderSettings.tintTextureAlpha = 1.0f;
             }
+            
+            // 3. Capture the completed appearance in the material.
+            player.body.wholeMaterialOverride = Assets::StoreMaterial(
+                scene.world,
+                Assets::MakeMaterial(player.body.renderSettings, texture));
             
 
             player.SyncViewAndBody(view.camera);
@@ -677,54 +649,8 @@ namespace Demo
     
     
 
-
-    void ApplyDemoAppearance_Backpack(SceneObject& object, GLuint backpackTexture)
-    {
-        if (object.source.filePath == "models/backpack/backpack.obj")
-        {
-            object.instance.renderSettings.textureExpected = true;
-            object.instance.textureID = backpackTexture;
-        }
-    }
-
-    void ApplyDemoAppearance_Teapot(SceneObject& object, GLuint teapotTexture)
-    {
-        if (object.source.filePath == "models/teapot/teapot.obj")
-        {
-            object.instance.renderSettings.textureExpected = true;
-            object.instance.textureID = teapotTexture;
-        }
-    }
-
-    void ApplyDemoAppearance_Ipshead(SceneObject& object, GLuint ipsheadTexture)
-    {
-        if (object.source.filePath == "models/lpshead/head.obj")
-        {
-            object.instance.renderSettings.textureExpected = true;
-            object.instance.textureID = ipsheadTexture;
-        }
-    }
-
-    void ApplyDemoAppearance_Cube(SceneObject& object, GLuint cubeTexture)
-    {
-        if (object.source.filePath == "models/cube/cube.obj")
-        {
-            object.instance.renderSettings.textureExpected = true;
-            object.instance.textureID = cubeTexture;
-        }
-    }
-
-    void ApplyDemoAppearance_Pine(SceneObject& object, GLuint pineTexture)
-    {
-        if (object.source.filePath == "models/pine/scrubPine.obj")
-        {
-            object.instance.renderSettings.textureExpected = true;
-            object.instance.textureID = pineTexture;
-        }
-    }
-
     
-    void PopulateComparison_Backpack(Scene& loaded, GLuint textureID)
+    void PopulateComparison_Backpack(Scene& loaded, AcornData::TextureId texture)
     {
         AcornData::SceneObjectDescription description; 
 
@@ -743,7 +669,7 @@ namespace Demo
 
         description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
 
         
         // Right object: custom OBJ interpretation.
@@ -753,11 +679,11 @@ namespace Demo
 
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
     }
 
     
-    void PopulateComparison_Teapot(Scene& loaded, GLuint textureID)
+    void PopulateComparison_Teapot(Scene& loaded, AcornData::TextureId texture)
     {
         AcornData::SceneObjectDescription description; 
 
@@ -778,7 +704,7 @@ namespace Demo
 
         description.transform.position = glm::vec3(-3.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
 
         
         // Right object: custom OBJ interpretation.
@@ -788,11 +714,11 @@ namespace Demo
 
         description.transform.position = glm::vec3(3.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
     }
 
     
-    void PopulateComparison_Ipshead(Scene& loaded, GLuint textureID)
+    void PopulateComparison_Ipshead(Scene& loaded, AcornData::TextureId texture)
     {
         AcornData::SceneObjectDescription description; 
 
@@ -813,7 +739,7 @@ namespace Demo
         
         description.transform.position = glm::vec3(-2.0f, 2.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
 
         
         // Right object: custom OBJ interpretation.
@@ -823,11 +749,11 @@ namespace Demo
 
         description.transform.position = glm::vec3(2.0f, 2.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
     }
 
     
-    void PopulateComparison_Cube(Scene& loaded, GLuint textureID)
+    void PopulateComparison_Cube(Scene& loaded, AcornData::TextureId texture)
     {
         AcornData::SceneObjectDescription description; 
 
@@ -848,7 +774,7 @@ namespace Demo
         
         description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
 
         
         // Right object: custom OBJ interpretation.
@@ -858,11 +784,11 @@ namespace Demo
 
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
     }
 
     
-    void PopulateComparison_Pine(Scene& loaded, GLuint textureID)
+    void PopulateComparison_Pine(Scene& loaded, AcornData::TextureId texture)
     {
         AcornData::SceneObjectDescription description; 
 
@@ -883,7 +809,7 @@ namespace Demo
         
        description.transform.position = glm::vec3(-3.0f, -2.0f, 0.5f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
 
         
         // Right object: custom OBJ interpretation.
@@ -893,11 +819,11 @@ namespace Demo
 
         description.transform.position = glm::vec3(3.0f, -2.0f, 0.5f);
         
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
     }
 
     
-    void PopulateComparison_SportsCar(Scene& loaded, GLuint textureID)
+    void PopulateComparison_SportsCar(Scene& loaded, AcornData::TextureId texture)
     {
         AcornData::SceneObjectDescription description; 
 
@@ -916,7 +842,7 @@ namespace Demo
         
         description.transform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
 
         
         // Right object: custom OBJ interpretation.
@@ -926,7 +852,7 @@ namespace Demo
 
         description.transform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 
-        loaded.AddObject(description, textureID);
+        loaded.AddObject(description, texture);
     }
     
     

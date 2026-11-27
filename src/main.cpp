@@ -4,15 +4,16 @@
 #include "rendering/OpenGLErrors.h"
 #include "rendering/Renderer.h"
 #include "rendering/ShaderProgram.h" 
+#include "rendering/Texture.h"
 #include "SceneManager.h"
 #include "testing/CarouselDemo.h"
 #include "testing/Demo.h"
 #include "Utility/InputSystem.h"
 #include "Utility/InputContext.h"
 
-
 // Standard library
 #include <array>
+#include "assets/AssetRecords.h"
 #include <cassert>      // assert 
 #include <chrono>       // For measuring application load time 
 #include <cmath>        // Scalar math for geometry and animation
@@ -33,8 +34,6 @@
 
 // Third-party libraries - stb 
 #include "stb_image.h"                      // Texture image loading and vertical flip
-
-
 
 
 namespace
@@ -250,6 +249,21 @@ int main(int argc, char **argv) {
     
         // Destroyed when this scope ends, before glfwDestroyWindow().
         Input::InputSystem input(window);
+        
+        
+        
+        // ---- Prepare for Flecs entity system, and model assets cache ---- 
+        
+        // Relative model paths are resolved against this directory.
+        // The run configuration must start the program in the asset root        
+        const std::filesystem::path projectRoot = std::filesystem::current_path(); 
+        
+        // Application-owned resources survive individual scene changes.
+        // Declaration order gives reverse destruction:
+        // scene -> lookup -> world -> geometry cache. 
+        Assets::ModelCache modelCache(projectRoot);
+        flecs::world world;
+        Assets::FlatModelAssets flatModels;
     
         
         
@@ -262,50 +276,50 @@ int main(int argc, char **argv) {
         // loading the testing-texture
         stbi_set_flip_vertically_on_load(true);     // changes stb's loading setting for subsequent loads
         
-        GLuint testTexture_crate = Texture::LoadTexture2D("textures/container.jpg"); 
+        GLuint testTexture_crate = Assets::LoadTexture2D("textures/container.jpg"); 
         if (testTexture_crate == 0)
         {
             std::cerr << "[Warning] Failed to load texture: textures/container.jpg\n";
         }
         
-        GLuint testTexture_face = Texture::LoadTexture2D("textures/awesomeface.png"); 
+        GLuint testTexture_face = Assets::LoadTexture2D("textures/awesomeface.png"); 
         if (testTexture_face == 0)
         {
             std::cerr << "[Warning] Failed to load texture: textures/awesomeface.png\n";
         }
         
         
-        GLuint backpackTexture = Texture::LoadTexture2D("models/backpack/diffuse.jpg");
+        GLuint backpackTexture = Assets::LoadTexture2D("models/backpack/diffuse.jpg");
         if (backpackTexture == 0)
         {
             std::cerr << "[Warning] Failed to load texture: models/backpack/diffuse.jpg\n";
         }
         
-        GLuint teapotTexture = Texture::LoadTexture2D("models/teapot/default.png");
+        GLuint teapotTexture = Assets::LoadTexture2D("models/teapot/default.png");
         if (teapotTexture == 0)
         {
             std::cerr << "[Warning] Failed to load texture: models/teapot/default.png\n";
         }
         
-        GLuint ipsheadTexture = Texture::LoadTexture2D("models/lpshead/rendered.jpg");
+        GLuint ipsheadTexture = Assets::LoadTexture2D("models/lpshead/rendered.jpg");
         if (ipsheadTexture == 0)
         {
             std::cerr << "[Warning] Failed to load texture: models/lpshead/rendered.jpg\n";
         }
         
-        GLuint cubeTexture = Texture::LoadTexture2D("models/cube/default.png");
+        GLuint cubeTexture = Assets::LoadTexture2D("models/cube/default.png");
         if (cubeTexture == 0)
         {
             std::cerr << "[Warning] Failed to load texture: models/cube/default.png\n";
         }
         
-        GLuint pineTexture = Texture::LoadTexture2D("models/pine/LushPine.png");
+        GLuint pineTexture = Assets::LoadTexture2D("models/pine/LushPine.png");
         if (pineTexture == 0)
         {
             std::cerr << "[Warning] Failed to load texture: models/pine/LushPine.png\n";
         }
         
-        GLuint cobblestoneTexture = Texture::LoadTexture2D("textures/cobblestone_floor_07_diff_4k.jpg");
+        GLuint cobblestoneTexture = Assets::LoadTexture2D("textures/cobblestone_floor_07_diff_4k.jpg");
         if (cobblestoneTexture == 0)
         {
             std::cerr << "[Warning] Failed to load texture: textures/cobblestone_floor_07_diff_4k.jpg\n";
@@ -314,29 +328,60 @@ int main(int argc, char **argv) {
         
         
         std::string playerFirstBody = "models/cube/cube.obj";
-        std::string playerBody = "models/suzanne/suzanne.obj";
+        std::string playerMonkeyBody = "models/suzanne/suzanne.obj";
         std::string playerOtherBody = "models/lpshead/head.obj";
         
         
-        // for saving textures path to a scene 
-        const std::unordered_map<std::string, GLuint> sceneTextures{
-            {"models/cube/default.png", cubeTexture},
-            {"models/pine/LushPine.png", pineTexture},
-            {"models/teapot/default.png", teapotTexture},
-            {"models/backpack/diffuse.jpg", backpackTexture},
-            {"textures/cobblestone_floor_07_diff_4k.jpg", cobblestoneTexture}
+        
+        // Maps saved paths to shared ECS texture records.
+        // These records borrow the GL objects still owned and deleted by main.
+        const std::unordered_map<std::string, AcornData::TextureId>
+        sceneTextures{
+            {"models/cube/default.png",
+                Assets::StoreTexture(world,
+                    {cubeTexture, "models/cube/default.png"})},
+
+            {"models/pine/LushPine.png",
+                Assets::StoreTexture(world,
+                    {pineTexture, "models/pine/LushPine.png"})},
+
+            {"models/teapot/default.png",
+                Assets::StoreTexture(world,
+                    {teapotTexture, "models/teapot/default.png"})},
+
+            {"models/backpack/diffuse.jpg",
+                Assets::StoreTexture(world,
+                    {backpackTexture, "models/backpack/diffuse.jpg"})},
+
+            {"textures/cobblestone_floor_07_diff_4k.jpg",
+                Assets::StoreTexture(world,
+                    {cobblestoneTexture,
+                     "textures/cobblestone_floor_07_diff_4k.jpg"})}
         };
         
         
         stbi_set_flip_vertically_on_load(false);
         
         
-        // Owns this level's cached geometry and newly created scene objects.
-        Scene activeScene{
-            std::filesystem::current_path()
-        };
         
-                
+        // A real shared default material stored in Flecs.
+        // Model slots can reference it; it is distinct from DrawModel's
+        // local emergency fallback value.
+        const AcornData::MaterialId fallbackMaterial =
+            Assets::StoreMaterial(world, AcornData::Material{glm::vec3(0.75f)});
+        
+        
+        Scene activeScene(
+            modelCache,
+            world,
+            flatModels,
+            fallbackMaterial);
+        
+        
+        
+        
+        
+        
         
         
         // ---- Scene Settings ---- 
@@ -428,15 +473,15 @@ int main(int argc, char **argv) {
             {
                 if (index <= 2)
                 {
-                    loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerFirstBody);
+                    loaded = Demo::CreatePlayers(activeScene, sceneTextures.at("models/cube/default.png"), playerFirstBody);
                 }
                 else if (index == 3)
                 {
-                    loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerOtherBody);
+                    loaded = Demo::CreatePlayers(activeScene, sceneTextures.at("models/cube/default.png"), playerOtherBody);
                 }
                 else
                 {
-                    loaded = Demo::CreatePlayers(activeScene, cubeTexture, playerBody);
+                    loaded = Demo::CreatePlayers(activeScene, sceneTextures.at("models/cube/default.png"), playerMonkeyBody);
                 }
             }
             
@@ -467,21 +512,26 @@ int main(int argc, char **argv) {
                 const std::string& path = descriptions[i].textureFilePath;
                 auto& instance = activeScene.placedObjects[i].instance;
 
-                instance.textureID = 0;
+                AcornData::TextureId texture{};
 
-                if (path.empty())
-                    continue; // Preserve textureExpected for deliberate error tests.
-
-                const auto found = sceneTextures.find(path);
-
-                if (found != sceneTextures.end())
+                if (!path.empty())
                 {
-                    instance.textureID = found->second;
+                    const auto found = sceneTextures.find(path);
+
+                    if (found != sceneTextures.end())
+                        texture = found->second;
+                    else
+                        std::cerr << "[Texture] No loaded texture for: " << path << '\n';
                 }
-                else
-                {
-                    std::cerr << "[Texture] No loaded texture for: " << path << '\n';
-                }
+                
+                // AddObject created this instance's private material.
+                // Replace its values after resolving the saved texture path.
+                // Keep textureExpected so failed requests still display diagnostics.
+                auto materialEntity =
+                    world.entity(instance.wholeMaterialOverride.value);
+
+                (void)materialEntity.set<AcornData::Material>(
+                    Assets::MakeMaterial(instance.renderSettings, texture));
             }            
             
 

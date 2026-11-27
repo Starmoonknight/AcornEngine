@@ -29,7 +29,7 @@ struct Player
     // Owned instance; geometry and texture remain borrowed.
     //  - geometry is in the scene cache 
     //  - texture is applied through hard coded for now  
-    AcornData::RenderModelInstance body;
+    AcornData::ModelInstance body;
     
     // Converts the imported model's facing direction into our -Z-forward
     // convention. Change this per model; identity means no correction.

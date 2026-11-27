@@ -3,6 +3,7 @@
 
 
 // Project headers
+#include "assets/AssetRecords.h"
 #include "assets/ModelCache.h"
 #include "rendering/Camera.h"
 #include "rendering/RenderInstances.h"
@@ -18,12 +19,16 @@
 
 // Third-party libraries
 #include <glm/glm.hpp>     
+#include <flecs.h>
 
 
 
 class ShaderProgram;
 
-
+namespace Assets
+{
+    class FlatModelAssets;
+}
 
 
 
@@ -140,7 +145,7 @@ struct SceneCamera
     
     // temp-player code to skip rendering the player this camera is attached to 
     // Borrowed pointer. Skip this instance only when drawing this view.
-    const AcornData::RenderModelInstance* hiddenInstance = nullptr;
+    const AcornData::ModelInstance* hiddenInstance = nullptr;
 };
 
 
@@ -154,9 +159,9 @@ struct SceneObject
     
     // Current placement, appearance, and borrowed resource references.
     // Stored by value: destroying SceneObject destroys this instance.
-    // The GPU model belongs to Scene::modelCache.
+    // GPU geometry belongs to the application’s model cache.
     // The texture, if any, belongs to an external owner.
-    AcornData::RenderModelInstance instance;
+    AcornData::ModelInstance instance;
 };
 
 
@@ -181,7 +186,15 @@ struct Scene
     //      scene instead of deleting everything on Scene switch. 
     //      Might make a pointer instead later?  
     */
-    Assets::ModelCache modelCache;
+    
+    // Borrowed application resources. Scene does not destroy these.
+    // They must outlive every scene and preview using them.
+    Assets::ModelCache& modelCache;
+    flecs::world& world;
+    Assets::FlatModelAssets& flatModels;
+    
+    // Identity of the shared engine default material.
+    AcornData::MaterialId fallbackMaterial{};
     
     
     // Fixed storage: body addresses remain stable while the Scene exists.
@@ -204,13 +217,14 @@ struct Scene
     // Non-owning drawing registrations.
     // May refer to placed objects or, later, bodies owned by players.
     // Registration does not create an object or extend its lifetime.
-    std::vector<AcornData::RenderModelInstance*> renderInstances;
+    std::vector<AcornData::ModelInstance*> renderInstances;
     
     // Actual camera values owned by this scene.
     // Clear or vector reallocation can invalidate camera references.
     std::vector<SceneCamera> cameras;
     
     AcornData::SceneSettings settings;
+    
     std::string name;
     int sceneID = -1;       // Application-assigned label; -1 means unassigned.
     
@@ -219,22 +233,28 @@ struct Scene
     // Initial poses retained independently of moving player/camera state.
     std::array<AcornData::PlayerStart, 2> playerStarts{};
     
-    // Runtime goal location. No goal rendering or completion logic yet.
+    // Runtime goal location used by the goal-completion check.
     glm::vec3 goalPosition{0.0f};
     
     
     
-    // Creates an empty scene with a fixed model-path root.
-    // Supply an absolute directory. Constructing the empty cache does
-    // not load geometry, AddObject performs loading when requested.
-    explicit Scene(const std::filesystem::path& projectRoot)
-        : modelCache(projectRoot)
+    // Create an empty scene using application-owned asset services.
+    // Construction does not load geometry or create placed objects.
+    Scene(
+        Assets::ModelCache& cache,
+        flecs::world& ecs,
+        Assets::FlatModelAssets& models,
+        AcornData::MaterialId defaultMaterial)
+        : modelCache(cache),
+          world(ecs),
+          flatModels(models),
+          fallbackMaterial(defaultMaterial)
     {
     }
     
     
     // Automatic member destruction releases scene-owned resources.
-    // The cache is destroyed after placed objects.
+    // Scene borrows the cache, application construction order controls its lifetime.
     // A suitable OpenGL context must remain current during destruction.
     //
     // Copying is prohibited because borrowed registrations would otherwise
@@ -246,40 +266,36 @@ struct Scene
     Scene& operator=(Scene&&) = delete;
     
     
-    // Loads/reuses geometry, creates a placed object, and registers its
-    // instance for rendering. Copies the description's initial values.
+    // Load/reuse geometry, resolve its default model asset, and create a
+    // scene-owned instance with a private material converted from description.
     //
-    // Returns nullptr for a model-load failure reported by the cache.
-    // On success, the returned pointer survives subsequent appends,
-    // but must not be used after Clear() or scene destruction.
-    //
-    // textureID is borrowed; 0 means no texture. Its external owner must
-    // keep it alive while used. This function does not load/delete textures.
-    // Requires a suitable current OpenGL context for geometry upload.
+    // texture identifies a shared Texture record; zero means none assigned.
+    // 
+    // Returns nullptr when geometry loading fails.
+    // The returned object survives appends, but not Clear()/scene destruction.
+    // Requires a current OpenGL context if geometry must be uploaded.
     SceneObject* AddObject(
-        const AcornData::SceneObjectDescription& description, 
-        GLuint textureID = 0);
+        const AcornData::SceneObjectDescription& description,
+        AcornData::TextureId texture = {});
     
     
     // Adds an existing instance to the drawing list.
     // Ignores null and duplicate addresses. Does not take ownership.
     // The owner must keep the instance at a valid address while registered.
-    void RegisterRenderInstance(AcornData::RenderModelInstance* model); 
+    void RegisterRenderInstance(AcornData::ModelInstance* model); 
     
     // Removes all registrations of this address.
     // Does not destroy the instance or release its resources.
     // Unregister before destroying an individually owned instance.
-    void UnregisterRenderInstance(AcornData::RenderModelInstance* model);
+    void UnregisterRenderInstance(AcornData::ModelInstance* model);
     
     
-    // Removes registrations, destroys scene-owned contents, releases
-    // cached geometry, and resets level metadata. Keeps the cache's root.
-    // Borrowed textures are not deleted.
-    //
-    // Call outside drawing/update traversal with a suitable GL context.
-    // Old object, model, and camera references must no longer be used.
-    // External instances borrowing this cache's models must first be
-    // destroyed or detached; clearing registrations alone is insufficient.
+    // Remove scene-owned instances and borrowed render registrations.
+    // Destroy scene-owned runtime contents.
+    // Shared geometry and asset records remain alive in application-owned storage.
+    // Previously returned SceneObject pointers become invalid.
+    //  Note:   If I get any event system up and running maybe make this an event 
+    //          so other scripts can know when pointers are stale? 
     void Clear();
     
     

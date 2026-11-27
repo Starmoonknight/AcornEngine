@@ -291,11 +291,11 @@ namespace
         // DrawModel handles per-instance visibility.
         // No model or camera animation is advanced here: a camera may
         // need two visible copies, but the world still updates only once.
-        for (const AcornData::RenderModelInstance* model : scene.renderInstances)
+        for (const AcornData::ModelInstance* model : scene.renderInstances)
         {
             // sceneCamera.hiddenInstance is temp-player code, to hide player from its own camera 
             if (model != nullptr && model != sceneCamera.hiddenInstance)
-                Rendering::DrawModel(shader, matrices, *model);
+                Rendering::DrawModel(scene.world, shader, matrices, *model);
         }
     }
     
@@ -356,10 +356,15 @@ namespace Demo
             ESplitScreenSettings_Extra_Carousel::CarouselGridSplit)
         {
             
-            // Temporary preview: owns camera copies and an empty model cache.
-            // Render registrations borrow the original scene's live instances.
-            // Do not call AddObject on this preview or retain it after this draw.
-            Scene preview{std::filesystem::current_path()};
+            // Temporary camera/layout copy.
+            // Borrows application assets and the original scene's render instances.
+            // Destroying this preview does not clear shared geometry or asset records.
+            Scene preview{
+                scene.modelCache,
+                scene.world,
+                scene.flatModels,
+                scene.fallbackMaterial
+            };
             preview.cameras = scene.cameras;
             preview.settings = scene.settings;
             preview.renderInstances = scene.renderInstances;
@@ -383,10 +388,15 @@ namespace Demo
             settings.layout ==
             ESplitScreenSettings_Extra_Carousel::CarouselVerticalSplit;
 
-        // Temporary preview: owns camera copies and an empty model cache.
-        // Render registrations borrow the original scene's live instances.
-        // Do not call AddObject on this preview or retain it after this draw.
-        Scene preview{std::filesystem::current_path()};
+        // Temporary camera/layout copy.
+        // Borrows application assets and the original scene's render instances.
+        // Destroying this preview does not clear shared geometry or asset records.
+        Scene preview{
+            scene.modelCache,
+            scene.world,
+            scene.flatModels,
+            scene.fallbackMaterial
+        };
         preview.cameras = scene.cameras;
         preview.settings = scene.settings;
         preview.renderInstances = scene.renderInstances;

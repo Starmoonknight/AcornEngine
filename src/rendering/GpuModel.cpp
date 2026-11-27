@@ -123,7 +123,8 @@ namespace Rendering
     {
         using AcornData::Vertex;
         using AcornData::GpuMesh;
-        // Colors are absent, or there is one color per vertex.
+        // Empty means no vertex colors.
+        // Otherwise, colors[i] belongs to vertices[i].
         assert(mesh.colors.empty() || mesh.colors.size() == mesh.vertices.size());
         
         // Triangle indices come in groups of three.

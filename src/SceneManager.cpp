@@ -134,29 +134,42 @@ namespace
 
 
 
-SceneObject* Scene::AddObject(const AcornData::SceneObjectDescription& description,GLuint textureID)
+SceneObject* Scene::AddObject(const AcornData::SceneObjectDescription& description, AcornData::TextureId texture)
 {
-    // Resolve the source and obtain shared geometry owned by this cache.
+    // The application cache owns this geometry.
     const auto* geometry = modelCache.GetOrLoad(description.source);
-
+    
     if (geometry == nullptr)
         return nullptr;
+    
+    // Multiple placements of the same cached geometry reuse one
+    // default model definition.
+    const auto asset = flatModels.GetOrCreate(
+        world,
+        *geometry,
+        description.source.filePath,
+        fallbackMaterial);
+    
+    // Legacy appearance belonged to each object, so preserve that
+    // independence by creating a material record for this placement.
+    const auto material = Assets::StoreMaterial(
+        world,
+        Assets::MakeMaterial(description.appearance, texture));
+    
 
     // Appending creates the owning object without relocating old objects.
     SceneObject& object = placedObjects.emplace_back();
-
-    // Keep enough source information to reconstruct it later.
+    
     object.source = description.source;
-
-    // Configure its runtime instance.
-    object.instance.gpuModel = geometry;
+    object.instance.asset = asset;
     object.instance.transform = description.transform;
     object.instance.renderSettings = description.appearance;
-    object.instance.textureID = textureID; 
-
+    
+    // Use the private material created above, including the supplied texture.
+    object.instance.wholeMaterialOverride = material;
+    
     // Expose the instance to rendering without transferring ownership.
     RegisterRenderInstance(&object.instance);
-
     return &object;
 }
 
@@ -174,10 +187,7 @@ void Scene::Clear()
     // Destroy runtime contents before releasing geometry they borrow.
     cameras.clear();
     placedObjects.clear();
-    
-    // Release all uploaded cached models, preserves the cache's fixed root.
-    modelCache.Clear();
-    
+        
     // Forget the previous level's metadata and starting state.
     settings = AcornData::SceneSettings{};
     name.clear();
@@ -188,7 +198,7 @@ void Scene::Clear()
 
 
 
-void Scene::RegisterRenderInstance(AcornData::RenderModelInstance* model)
+void Scene::RegisterRenderInstance(AcornData::ModelInstance* model)
 {
     if (model == nullptr)
         return;
@@ -204,7 +214,7 @@ void Scene::RegisterRenderInstance(AcornData::RenderModelInstance* model)
 }
 
 
-void Scene::UnregisterRenderInstance(AcornData::RenderModelInstance* model)
+void Scene::UnregisterRenderInstance(AcornData::ModelInstance* model)
 {
     // Removes every list entry whose pointer value equals model.
     // Only erases the stored pointer, object cleanup is handled by owner 
@@ -370,12 +380,12 @@ void Scene::DrawScene(const ShaderProgram& shader)
         const Rendering::CameraMatrices cameraMatrices = sceneCamera.camera.GetMatrices(); 
         
         
-        for (const AcornData::RenderModelInstance* model : renderInstances)
+        for (const AcornData::ModelInstance* model : renderInstances)
         {
             // sceneCamera.hiddenInstance is temp-player code, to hide player from its own camera 
             if (model != nullptr && model != sceneCamera.hiddenInstance)
             {
-                Rendering::DrawModel(shader, cameraMatrices, *model);
+                Rendering::DrawModel(world, shader, cameraMatrices, *model);
             }
         }
     }
